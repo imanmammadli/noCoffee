@@ -34,7 +34,7 @@ class WelcomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-            TButton('Start', onTap: () => Navigator.pushNamed(context, '/onboarding')),
+            TButton('Start', onTap: () => Navigator.pushNamed(context, '/name')),
             const SizedBox(height: 10),
             Text('No account needed — your data stays on this device.',
                 style: AppText.tiny(c.inkMuted), textAlign: TextAlign.center),

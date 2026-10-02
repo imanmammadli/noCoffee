@@ -19,6 +19,7 @@ import 'screens/settings_screen.dart';
 import 'screens/notification_settings_screen.dart';
 import 'screens/export_screen.dart';
 import 'screens/delete_data_screen.dart';
+import 'screens/name_screen.dart';
 
 void main() {
   runApp(const TaperApp());
@@ -74,6 +75,7 @@ class _TaperAppState extends State<TaperApp> {
           routes: {
             '/': (_) => const SplashScreen(),
             '/welcome': (_) => const WelcomeScreen(),
+            '/name': (_) => const NameScreen(),
             '/onboarding': (_) => const OnboardingFlow(),
             '/home': (_) => const HomeScreen(),
             '/tracking': (_) => const TrackingScreen(),

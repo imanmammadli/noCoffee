@@ -112,53 +112,63 @@ class _HomeScreenState extends State<HomeScreen> {
                   : "You're exactly at your limit today. Nicely judged.",
             ),
           const SizedBox(height: 12),
-          Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(
-              flex: 4,
-              child: TCard(
-                padding: const EdgeInsets.all(15),
-                child: app.lastCoffee == null
-                    ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Last coffee', style: AppText.tiny(c.inkMuted)),
-                        const SizedBox(height: 8),
-                        Text('None yet today', style: AppText.h3(c.ink)),
-                      ])
-                    : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Last coffee', style: AppText.tiny(c.inkMuted)),
-                        const SizedBox(height: 8),
-                        Row(children: [
-                          Text(drinkInfo(app.lastCoffee!.drink).emoji, style: const TextStyle(fontSize: 20)),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(drinkInfo(app.lastCoffee!.drink).label, style: AppText.h3(c.ink)),
-                              const SizedBox(height: 2),
-                              Text('${app.lastCoffee!.mg} mg · ${fmtAgo(app.lastCoffee!.time)}',
-                                  style: AppText.tiny(c.inkMuted)),
-                            ]),
-                          ),
+          IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Expanded(
+                flex: 4,
+                child: TCard(
+                  padding: const EdgeInsets.all(15),
+                  child: app.lastCoffee == null
+                      ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('Last coffee', style: AppText.tiny(c.inkMuted)),
+                          const SizedBox(height: 8),
+                          Text('None yet today', style: AppText.h3(c.ink)),
+                        ])
+                      : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('Last coffee', style: AppText.tiny(c.inkMuted)),
+                          const SizedBox(height: 8),
+                          Row(children: [
+                            Text(drinkInfo(app.lastCoffee!.drink).emoji, style: const TextStyle(fontSize: 20)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text(drinkInfo(app.lastCoffee!.drink).label, style: AppText.h3(c.ink)),
+                                const SizedBox(height: 2),
+                                Text('${app.lastCoffee!.mg} mg · ${fmtAgo(app.lastCoffee!.time)}',
+                                    style: AppText.tiny(c.inkMuted)),
+                              ]),
+                            ),
+                          ]),
                         ]),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 3,
+                child: TCard(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(children: [
+                        const Text('🔥', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Text('${app.streak}', style: AppText.num(c.ink, 24)),
                       ]),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('day streak', style: AppText.tiny(c.ink)),
+                          Text('Keep going!', style: AppText.tiny(c.inkMuted)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 3,
-              child: TCard(
-                padding: const EdgeInsets.all(15),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    const Text('🔥', style: TextStyle(fontSize: 18)),
-                    const SizedBox(width: 8),
-                    Text('${app.streak}', style: AppText.num(c.ink, 24)),
-                  ]),
-                  const Spacer(),
-                  Text('day streak', style: AppText.tiny(c.ink)),
-                  Text('Keep going!', style: AppText.tiny(c.inkMuted)),
-                ]),
-              ),
-            ),
-          ]),
+            ]),
+          ),
         ]),
       ),
     );

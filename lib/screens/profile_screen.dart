@@ -23,17 +23,24 @@ class ProfileScreen extends StatelessWidget {
               TCard(
                 child: Row(children: [
                   CircleAvatar(
-                    radius: 30, backgroundColor: c.coffee,
+                    radius: 30,
+                    backgroundColor: c.coffee,
                     child: Text(p.firstName.substring(0, 1),
-                        style: const TextStyle(color: Color(0xFFFFF9F1), fontWeight: FontWeight.w700, fontSize: 22)),
+                        style: const TextStyle(
+                            color: Color(0xFFFFF9F1),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 22)),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${p.firstName} ${p.lastName}', style: AppText.h2(c.ink)),
-                      const SizedBox(height: 4),
-                      Text(p.email, style: AppText.tiny(c.inkMuted)),
-                    ]),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${p.firstName} ${p.lastName}',
+                              style: AppText.h2(c.ink)),
+                          const SizedBox(height: 4),
+                          Text(p.email, style: AppText.tiny(c.inkMuted)),
+                        ]),
                   ),
                   Icon(Icons.chevron_right_rounded, color: c.inkMuted),
                 ]),
@@ -44,41 +51,58 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(child: _stat(context, '${app.streak}', 'day streak')),
                 const SizedBox(width: 12),
-                Expanded(child: _stat(context, '${app.achievements.where((a) => a.isUnlocked(app.snapshot)).length}', 'badges', color: c.accent)),
+                Expanded(
+                    child: _stat(
+                        context,
+                        '${app.achievements.where((a) => a.isUnlocked(app.snapshot)).length}',
+                        'badges',
+                        color: c.accent)),
               ]),
               const SizedBox(height: 24),
               Text('Personal information', style: AppText.label(c.inkMuted)),
               const SizedBox(height: 8),
               TCard(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
                 child: Column(children: [
-                  _row(context, Icons.person_outline_rounded, 'Name', '${p.firstName} ${p.lastName}'),
+                  _row(context, Icons.person_outline_rounded, 'Name',
+                      '${p.firstName} ${p.lastName}'),
                   Divider(color: c.line, height: 1),
-                  _row(context, Icons.calendar_today_rounded, 'Age', '${p.age}'),
+                  _row(
+                      context, Icons.calendar_today_rounded, 'Age', '${p.age}'),
                   Divider(color: c.line, height: 1),
-                  _row(context, Icons.monitor_weight_outlined, 'Weight', '${p.weightKg.toStringAsFixed(0)} kg'),
+                  _row(context, Icons.coffee_rounded, 'Daily coffee',
+                      '${p.dailyCups} cups'),
                   Divider(color: c.line, height: 1),
-                  _row(context, Icons.coffee_rounded, 'Daily coffee', '${p.dailyCups} cups'),
-                  Divider(color: c.line, height: 1),
-                  _row(context, Icons.attach_money_rounded, 'Coffee price', '${p.coffeePrice.toStringAsFixed(2)} ${p.currency}'),
+                  _row(context, Icons.attach_money_rounded, 'Coffee price',
+                      '${p.coffeePrice.toStringAsFixed(2)} ${p.currency}'),
                 ]),
               ),
               const SizedBox(height: 12),
-              TButton('Edit profile', style: TBtnStyle.secondary, small: true,
+              TButton('Edit profile',
+                  style: TBtnStyle.secondary,
+                  small: true,
                   onTap: () => Navigator.pushNamed(context, '/editProfile')),
               const SizedBox(height: 16),
               TCard(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
                 child: Column(children: [
                   InkWell(
                     onTap: () => Navigator.pushNamed(context, '/achievements'),
-                    child: _row(context, Icons.auto_awesome_rounded, 'Achievements',
-                        '${app.achievements.where((a) => a.isUnlocked(app.snapshot)).length} of ${app.achievements.length}', chevron: true),
+                    child: _row(
+                        context,
+                        Icons.auto_awesome_rounded,
+                        'Achievements',
+                        '${app.achievements.where((a) => a.isUnlocked(app.snapshot)).length} of ${app.achievements.length}',
+                        chevron: true),
                   ),
                   Divider(color: c.line, height: 1),
                   InkWell(
                     onTap: () => Navigator.pushNamed(context, '/settings'),
-                    child: _row(context, Icons.settings_outlined, 'Settings', '', chevron: true),
+                    child: _row(
+                        context, Icons.settings_outlined, 'Settings', '',
+                        chevron: true),
                   ),
                 ]),
               ),
@@ -89,7 +113,8 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _stat(BuildContext context, String value, String label, {Color? color}) {
+  Widget _stat(BuildContext context, String value, String label,
+      {Color? color}) {
     final c = context.colors;
     return TCard(
       padding: const EdgeInsets.all(14),
@@ -101,16 +126,23 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _row(BuildContext context, IconData icon, String label, String value, {bool chevron = false}) {
+  Widget _row(BuildContext context, IconData icon, String label, String value,
+      {bool chevron = false}) {
     final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 13),
       child: Row(children: [
         Icon(icon, size: 19, color: c.inkMuted),
         const SizedBox(width: 14),
-        Expanded(child: Text(label, style: AppText.body(c.ink).copyWith(fontWeight: FontWeight.w600, fontSize: 14.5))),
+        Expanded(
+            child: Text(label,
+                style: AppText.body(c.ink)
+                    .copyWith(fontWeight: FontWeight.w600, fontSize: 14.5))),
         Text(value, style: AppText.tiny(c.inkMuted)),
-        if (chevron) ...[const SizedBox(width: 4), Icon(Icons.chevron_right_rounded, size: 17, color: c.inkMuted)],
+        if (chevron) ...[
+          const SizedBox(width: 4),
+          Icon(Icons.chevron_right_rounded, size: 17, color: c.inkMuted)
+        ],
       ]),
     );
   }
