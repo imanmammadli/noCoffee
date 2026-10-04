@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 import '../models.dart';
-import '../state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
@@ -15,11 +14,47 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   int step = 0;
   final int totalSteps = 5;
 
+  // Fully local draft state — nothing is written to AppState until the
+  // final "Start my journey" tap, so every screen always reflects the
+  // latest choice instead of stale shared-state reads.
+  Goal goal = Goal.reduce;
+  int cups = 4;
+  Set<DrinkType> drinks = {DrinkType.espresso, DrinkType.cappuccino, DrinkType.tea};
+  QuitMethod method = QuitMethod.gradual;
+  DateTime startDate = DateTime.now();
+  ReductionSpeed speed = ReductionSpeed.steady;
+
+  int get estimateMg => cups * 90;
+
+  List<double> _steps() {
+    final toZero = goal == Goal.quit;
+    if (toZero) {
+      switch (speed) {
+        case ReductionSpeed.gentle: return [0.85, 0.72, 0.6, 0.48, 0.36, 0.24, 0.12, 0.0];
+        case ReductionSpeed.fast: return [0.5, 0.2, 0.0];
+        case ReductionSpeed.steady: return [0.75, 0.625, 0.375, 0.25, 0.0];
+      }
+    } else {
+      switch (speed) {
+        case ReductionSpeed.gentle: return [0.9, 0.8, 0.7, 0.6, 0.55, 0.5];
+        case ReductionSpeed.fast: return [0.7, 0.5, 0.4];
+        case ReductionSpeed.steady: return [0.8, 0.65, 0.55, 0.45];
+      }
+    }
+  }
+
   void next() {
     if (step < totalSteps - 1) {
       setState(() => step++);
     } else {
-      context.app.completeOnboarding();
+      final app = context.app;
+      app.onboardingGoal = goal;
+      app.onboardingCups = cups;
+      app.onboardingUsualDrinks = drinks;
+      app.onboardingMethod = method;
+      app.onboardingStartDate = startDate;
+      app.onboardingSpeed = speed;
+      app.completeOnboarding();
       Navigator.pushReplacementNamed(context, '/home');
     }
   }
@@ -27,7 +62,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final app = context.app;
     return Scaffold(
       backgroundColor: c.bg,
       body: SafeArea(
@@ -53,7 +87,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(22, 14, 22, 22),
-              child: _stepBody(context, app),
+              child: _stepBody(),
             ),
           ),
         ]),
@@ -61,34 +95,23 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  Widget _stepBody(BuildContext context, AppState app) {
+  Widget _stepBody() {
     switch (step) {
       case 0:
-        return _GoalStep(onNext: next);
+        return _goalStep();
       case 1:
-        return _ConsumptionStep(onNext: next);
+        return _consumptionStep();
       case 2:
-        return _MethodStep(onNext: next);
+        return _methodStep();
       case 3:
-        return _PlanConfigStep(onNext: next);
+        return _planConfigStep();
       default:
-        return _ReadyStep(onDone: next);
+        return _readyStep();
     }
   }
-}
 
-class _GoalStep extends StatefulWidget {
-  final VoidCallback onNext;
-  const _GoalStep({required this.onNext});
-  @override
-  State<_GoalStep> createState() => _GoalStepState();
-}
-
-class _GoalStepState extends State<_GoalStep> {
-  @override
-  Widget build(BuildContext context) {
+  Widget _goalStep() {
     final c = context.colors;
-    final app = context.app;
     final options = [
       (Goal.reduce, '📉', 'Reduce caffeine', 'Cut down to a healthier daily amount'),
       (Goal.quit, '🚫', 'Quit coffee completely', 'Get to zero and stay there'),
@@ -104,35 +127,23 @@ class _GoalStepState extends State<_GoalStep> {
           itemCount: options.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (_, i) {
-            final (goal, emoji, title, sub) = options[i];
+            final (g, emoji, title, sub) = options[i];
             return SelectRow(
               emoji: emoji,
               title: title,
               subtitle: sub,
-              on: app.onboardingGoal == goal,
-              onTap: () => setState(() => app.onboardingGoal = goal),
+              on: goal == g,
+              onTap: () => setState(() => goal = g),
             );
           },
         ),
       ),
-      TButton('Continue', onTap: widget.onNext),
+      TButton('Continue', onTap: next),
     ]);
   }
-}
 
-class _ConsumptionStep extends StatefulWidget {
-  final VoidCallback onNext;
-  const _ConsumptionStep({required this.onNext});
-  @override
-  State<_ConsumptionStep> createState() => _ConsumptionStepState();
-}
-
-class _ConsumptionStepState extends State<_ConsumptionStep> {
-  @override
-  Widget build(BuildContext context) {
+  Widget _consumptionStep() {
     final c = context.colors;
-    final app = context.app;
-    final estimate = app.onboardingCups * 90;
     return SingleChildScrollView(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('How much coffee do you drink?', style: AppText.h1(c.ink)),
@@ -144,12 +155,9 @@ class _ConsumptionStepState extends State<_ConsumptionStep> {
             Text('Cups per day', style: AppText.label(c.inkMuted)),
             const SizedBox(height: 12),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              _stepBtn(context, Icons.remove_rounded,
-                  () => setState(() => app.onboardingCups = (app.onboardingCups - 1).clamp(0, 15))),
-              Text('${app.onboardingCups}', style: AppText.num(c.ink, 44)),
-              _stepBtn(context, Icons.add_rounded,
-                  () => setState(() => app.onboardingCups = (app.onboardingCups + 1).clamp(0, 15)),
-                  filled: true),
+              _stepBtn(Icons.remove_rounded, () => setState(() => cups = (cups - 1).clamp(0, 15))),
+              Text('$cups', style: AppText.num(c.ink, 44)),
+              _stepBtn(Icons.add_rounded, () => setState(() => cups = (cups + 1).clamp(0, 15)), filled: true),
             ]),
           ]),
         ),
@@ -162,12 +170,12 @@ class _ConsumptionStepState extends State<_ConsumptionStep> {
           children: kDrinks
               .map((d) => TChip(
                     d.label,
-                    on: app.onboardingUsualDrinks.contains(d.type),
+                    on: drinks.contains(d.type),
                     onTap: () => setState(() {
-                      if (app.onboardingUsualDrinks.contains(d.type)) {
-                        app.onboardingUsualDrinks.remove(d.type);
+                      if (drinks.contains(d.type)) {
+                        drinks.remove(d.type);
                       } else {
-                        app.onboardingUsualDrinks.add(d.type);
+                        drinks.add(d.type);
                       }
                     }),
                   ))
@@ -182,22 +190,21 @@ class _ConsumptionStepState extends State<_ConsumptionStep> {
                 Text('Estimated intake', style: AppText.tiny(c.inkMuted)),
                 const SizedBox(height: 4),
                 Text.rich(TextSpan(children: [
-                  TextSpan(text: '$estimate mg', style: AppText.num(c.ink, 28)),
+                  TextSpan(text: '$estimateMg mg', style: AppText.num(c.ink, 28)),
                   TextSpan(text: ' / day', style: AppText.body(c.inkMuted)),
                 ])),
               ]),
             ),
-            TPill(estimate > 300 ? 'Above average' : 'Typical',
-                fg: c.warn, bg: c.warnSoft),
+            TPill(estimateMg > 300 ? 'Above average' : 'Typical', fg: c.warn, bg: c.warnSoft),
           ]),
         ),
         const SizedBox(height: 24),
-        TButton('Continue', onTap: widget.onNext),
+        TButton('Continue', onTap: next),
       ]),
     );
   }
 
-  Widget _stepBtn(BuildContext context, IconData icon, VoidCallback onTap, {bool filled = false}) {
+  Widget _stepBtn(IconData icon, VoidCallback onTap, {bool filled = false}) {
     final c = context.colors;
     return Material(
       color: filled ? c.coffee : c.surface2,
@@ -206,47 +213,34 @@ class _ConsumptionStepState extends State<_ConsumptionStep> {
         onTap: onTap,
         customBorder: const CircleBorder(),
         child: SizedBox(
-          width: 46,
-          height: 46,
+          width: 46, height: 46,
           child: Icon(icon, size: 19, color: filled ? const Color(0xFFFFF9F1) : c.ink),
         ),
       ),
     );
   }
-}
 
-class _MethodStep extends StatefulWidget {
-  final VoidCallback onNext;
-  const _MethodStep({required this.onNext});
-  @override
-  State<_MethodStep> createState() => _MethodStepState();
-}
-
-class _MethodStepState extends State<_MethodStep> {
-  @override
-  Widget build(BuildContext context) {
+  Widget _methodStep() {
     final c = context.colors;
-    final app = context.app;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('How do you want to quit?', style: AppText.h1(c.ink)),
       const SizedBox(height: 8),
-      Text('At ${app.onboardingCups * 90} mg a day, stopping suddenly usually means a rough couple of days.',
+      Text('At $estimateMg mg a day, stopping suddenly usually means a rough couple of days.',
           style: AppText.body(c.inkMuted)),
       const SizedBox(height: 24),
       InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => setState(() => app.onboardingMethod = QuitMethod.gradual),
+        onTap: () => setState(() => method = QuitMethod.gradual),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: app.onboardingMethod == QuitMethod.gradual ? c.coffeeSoft : c.surface,
-            border: Border.all(
-                color: app.onboardingMethod == QuitMethod.gradual ? c.coffee : c.line2, width: 1.4),
+            color: method == QuitMethod.gradual ? c.coffeeSoft : c.surface,
+            border: Border.all(color: method == QuitMethod.gradual ? c.coffee : c.line2, width: 1.4),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text('🪜', style: const TextStyle(fontSize: 20)),
+              const Text('🪜', style: TextStyle(fontSize: 20)),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -255,11 +249,8 @@ class _MethodStepState extends State<_MethodStep> {
                   Text('Step down week by week', style: AppText.tiny(c.inkMuted)),
                 ]),
               ),
-              Icon(
-                  app.onboardingMethod == QuitMethod.gradual
-                      ? Icons.check_circle_rounded
-                      : Icons.circle_outlined,
-                  color: app.onboardingMethod == QuitMethod.gradual ? c.accent : c.line2),
+              Icon(method == QuitMethod.gradual ? Icons.check_circle_rounded : Icons.circle_outlined,
+                  color: method == QuitMethod.gradual ? c.accent : c.line2),
             ]),
             const SizedBox(height: 12),
             Row(
@@ -277,7 +268,7 @@ class _MethodStepState extends State<_MethodStep> {
                   .toList(),
             ),
             const SizedBox(height: 10),
-            Text('~5 weeks · fewer withdrawal symptoms', style: AppText.tiny(c.inkMuted)),
+            Text('Several weeks · fewer withdrawal symptoms', style: AppText.tiny(c.inkMuted)),
           ]),
         ),
       ),
@@ -286,42 +277,31 @@ class _MethodStepState extends State<_MethodStep> {
         emoji: '✂️',
         title: 'Immediately',
         subtitle: 'Stop from your start date',
-        on: app.onboardingMethod == QuitMethod.immediate,
-        onTap: () => setState(() => app.onboardingMethod = QuitMethod.immediate),
+        on: method == QuitMethod.immediate,
+        onTap: () => setState(() => method = QuitMethod.immediate),
       ),
       const Spacer(),
-      TButton('Continue', onTap: widget.onNext),
+      TButton('Continue', onTap: next),
     ]);
   }
-}
 
-class _PlanConfigStep extends StatelessWidget {
-  final VoidCallback onNext;
-  const _PlanConfigStep({required this.onNext});
-  @override
-  Widget build(BuildContext context) {
+  Widget _planConfigStep() {
     final c = context.colors;
-    final app = context.app;
-    final estimate = app.onboardingCups * 90;
-    final steps = app.onboardingMethod == QuitMethod.immediate
-        ? [estimate, 0]
-        : (app.onboardingGoal == Goal.quit
-            ? [estimate, (estimate * .75).round(), (estimate * .625).round(), (estimate * .375).round(), (estimate * .25).round(), 0]
-            : [estimate, (estimate * .8).round(), (estimate * .65).round(), (estimate * .55).round(), (estimate * .45).round()]);
+    final stepsList = method == QuitMethod.immediate ? [estimateMg, 0] : _steps().map((f) => (estimateMg * f).round()).toList();
 
     return SingleChildScrollView(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Your step-down', style: AppText.h1(c.ink)),
         const SizedBox(height: 8),
-        Text('Built from $estimate mg a day. You can adjust this later from Plan.',
+        Text('Built from $estimateMg mg a day. You can adjust this later from Plan.',
             style: AppText.body(c.inkMuted)),
         const SizedBox(height: 20),
         TCard(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
           child: Column(
-            children: List.generate(steps.length, (i) {
+            children: List.generate(stepsList.length, (i) {
               final label = i == 0 ? 'Now' : 'Week $i';
-              final isLast = i == steps.length - 1;
+              final isLast = i == stepsList.length - 1;
               return Column(children: [
                 Row(children: [
                   Container(
@@ -331,38 +311,55 @@ class _PlanConfigStep extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(child: Text(label, style: AppText.h3(c.ink))),
-                  Text('${steps[i]} mg',
-                      style: AppText.num(isLast && steps[i] == 0 ? c.accent : c.ink, 16)),
+                  Text('${stepsList[i]} mg',
+                      style: AppText.num(isLast && stepsList[i] == 0 ? c.accent : c.ink, 16)),
                 ]),
-                if (i != steps.length - 1) Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Divider(color: c.line, height: 1)),
+                if (i != stepsList.length - 1)
+                  Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Divider(color: c.line, height: 1)),
               ]);
             }),
           ),
         ),
         const SizedBox(height: 16),
-        TInput(label: 'Start date', value: 'Today', icon: Icons.calendar_today_rounded),
-        const SizedBox(height: 10),
-        TInput(label: 'Reduction speed', value: 'Steady', icon: Icons.speed_rounded),
+        TInput(
+          label: 'Start date',
+          value: _fmtDate(startDate),
+          icon: Icons.calendar_today_rounded,
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: startDate,
+              firstDate: DateTime.now().subtract(const Duration(days: 1)),
+              lastDate: DateTime.now().add(const Duration(days: 60)),
+            );
+            if (picked != null) setState(() => startDate = picked);
+          },
+        ),
+        if (method == QuitMethod.gradual) ...[
+          const SizedBox(height: 10),
+          Text('Reduction speed', style: AppText.label(c.inkMuted)),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(child: TChip('Gentle', on: speed == ReductionSpeed.gentle, onTap: () => setState(() => speed = ReductionSpeed.gentle))),
+            const SizedBox(width: 8),
+            Expanded(child: TChip('Steady', on: speed == ReductionSpeed.steady, onTap: () => setState(() => speed = ReductionSpeed.steady))),
+            const SizedBox(width: 8),
+            Expanded(child: TChip('Fast', on: speed == ReductionSpeed.fast, onTap: () => setState(() => speed = ReductionSpeed.fast))),
+          ]),
+        ],
         const SizedBox(height: 24),
-        TButton('Continue', onTap: onNext),
+        TButton('Continue', onTap: next),
       ]),
     );
   }
-}
 
-class _ReadyStep extends StatelessWidget {
-  final VoidCallback onDone;
-  const _ReadyStep({required this.onDone});
-  @override
-  Widget build(BuildContext context) {
+  Widget _readyStep() {
     final c = context.colors;
-    final app = context.app;
-    final estimate = app.onboardingCups * 90;
-    final firstGoal = app.onboardingMethod == QuitMethod.immediate
-        ? 0
-        : (app.onboardingGoal == Goal.quit ? (estimate * .75).round() : (estimate * .8).round());
-    final weeks = app.onboardingMethod == QuitMethod.immediate ? 0 : (app.onboardingGoal == Goal.quit ? 5 : 4);
-    final targetDate = DateTime.now().add(Duration(days: weeks * 7));
+    final stepsList = method == QuitMethod.immediate ? [estimateMg, 0] : _steps().map((f) => (estimateMg * f).round()).toList();
+    final firstGoal = stepsList.length > 1 ? stepsList[1] : stepsList[0];
+    final weeksCount = method == QuitMethod.immediate ? 0 : stepsList.length - 1;
+    final targetDate = startDate.add(Duration(days: weeksCount * 7));
+
     return Column(children: [
       Expanded(
         child: Center(
@@ -378,9 +375,9 @@ class _ReadyStep extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                weeks == 0
-                    ? "You're starting from zero today. We'll help you through the first few days."
-                    : "In $weeks weeks you'll be caffeine-free. We'll keep the daily target in front of you.",
+                weeksCount == 0
+                    ? "You're starting from zero on ${_fmtDate(startDate)}. We'll help you through the first few days."
+                    : "In $weeksCount weeks you'll be caffeine-free. We'll keep the daily target in front of you.",
                 style: AppText.body(c.inkMuted),
                 textAlign: TextAlign.center,
               ),
@@ -390,7 +387,7 @@ class _ReadyStep extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text('First daily goal', style: AppText.label(c.inkMuted)),
-                  TPill('Starts today', fg: context.colors.accent, bg: context.colors.accentSoft),
+                  TPill('Starts ${_fmtDate(startDate)}', fg: c.accent, bg: c.accentSoft),
                 ]),
                 const SizedBox(height: 8),
                 Text('$firstGoal mg', style: AppText.num(c.ink, 44)),
@@ -408,7 +405,7 @@ class _ReadyStep extends StatelessWidget {
       ),
       Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: TButton('Start my journey', style: TBtnStyle.accent, onTap: onDone),
+        child: TButton('Start my journey', style: TBtnStyle.accent, onTap: next),
       ),
     ]);
   }

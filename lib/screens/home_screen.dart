@@ -36,7 +36,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(_todayLabel(), style: AppText.tiny(c.inkMuted)),
               ]),
             ),
-            TIconButton(Icons.notifications_none_rounded, onTap: () {}),
+              TIconButton(Icons.notifications_none_rounded,
+                onTap: () => Navigator.pushNamed(context, '/notificationSettings')),
             const SizedBox(width: 8),
             CircleAvatar(
               radius: 21,

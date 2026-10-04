@@ -134,9 +134,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+    DateTime onboardingStartDate = DateTime.now();
+  ReductionSpeed onboardingSpeed = ReductionSpeed.steady;
+
   void buildPlanFromOnboarding() {
     final estimateMg = onboardingCups * 90;
-    final start = DateTime.now();
+    final start = onboardingStartDate;
+    final toZero = onboardingGoal == Goal.quit;
     List<WeekStep> weeks;
     Duration totalSpan;
     switch (onboardingMethod) {
@@ -145,10 +149,9 @@ class AppState extends ChangeNotifier {
         totalSpan = const Duration(days: 1);
         break;
       case QuitMethod.gradual:
-        final steps = _speedSteps(onboardingGoal == Goal.quit);
+        final steps = _speedSteps(toZero, onboardingSpeed);
         weeks = [
-          for (int i = 0; i < steps.length; i++)
-            WeekStep(i + 1, (estimateMg * steps[i]).round())
+          for (int i = 0; i < steps.length; i++) WeekStep(i + 1, (estimateMg * steps[i]).round())
         ];
         totalSpan = Duration(days: weeks.length * 7);
         break;
@@ -156,7 +159,7 @@ class AppState extends ChangeNotifier {
     plan = Plan(
       goal: onboardingGoal,
       method: onboardingMethod,
-      speed: ReductionSpeed.steady,
+      speed: onboardingSpeed,
       startDate: start,
       targetDate: start.add(totalSpan),
       currentDailyLimit: weeks.first.targetMg,
@@ -166,9 +169,26 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<double> _speedSteps(bool toZero) {
-    if (toZero) return [0.75, 0.625, 0.375, 0.25, 0.0];
-    return [0.8, 0.65, 0.55, 0.45];
+  List<double> _speedSteps(bool toZero, ReductionSpeed speed) {
+    if (toZero) {
+      switch (speed) {
+        case ReductionSpeed.gentle:
+          return [0.85, 0.72, 0.6, 0.48, 0.36, 0.24, 0.12, 0.0];
+        case ReductionSpeed.fast:
+          return [0.5, 0.2, 0.0];
+        case ReductionSpeed.steady:
+          return [0.75, 0.625, 0.375, 0.25, 0.0];
+      }
+    } else {
+      switch (speed) {
+        case ReductionSpeed.gentle:
+          return [0.9, 0.8, 0.7, 0.6, 0.55, 0.5];
+        case ReductionSpeed.fast:
+          return [0.7, 0.5, 0.4];
+        case ReductionSpeed.steady:
+          return [0.8, 0.65, 0.55, 0.45];
+      }
+    }
   }
 
   void completeOnboarding() {

@@ -32,7 +32,7 @@ class TaperApp extends StatefulWidget {
 }
 
 class _TaperAppState extends State<TaperApp> {
-  final AppState state = AppState()..seedDemoData();
+  final AppState state = AppState();
 
   @override
   void initState() {

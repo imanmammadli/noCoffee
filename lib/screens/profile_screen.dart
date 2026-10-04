@@ -42,7 +42,6 @@ class ProfileScreen extends StatelessWidget {
                           Text(p.email, style: AppText.tiny(c.inkMuted)),
                         ]),
                   ),
-                  Icon(Icons.chevron_right_rounded, color: c.inkMuted),
                 ]),
               ),
               const SizedBox(height: 12),
