@@ -95,7 +95,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 p.age = int.tryParse(age.text) ?? p.age;
                 p.dailyCups = int.tryParse(cups.text) ?? p.dailyCups;
                 p.coffeePrice = double.tryParse(price.text) ?? p.coffeePrice;
-                context.app.notifyListeners();
+                context.app.refresh();
                 Navigator.pop(context);
                 showTaperToast(context, 'Profile updated');
               }),

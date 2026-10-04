@@ -177,6 +177,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void refresh() => notifyListeners();
+
   void setThemeMode(ThemeMode m) {
     themeMode = m;
     notifyListeners();

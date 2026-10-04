@@ -69,7 +69,7 @@ class _NameScreenState extends State<NameScreen> {
               if (parsedAge != null) p.age = parsedAge;
               final parsedPrice = double.tryParse(price.text.trim());
               if (parsedPrice != null) p.coffeePrice = parsedPrice;
-              context.app.notifyListeners();
+              context.app.refresh();
               Navigator.pushReplacementNamed(context, '/onboarding');
             }),
           ]),
