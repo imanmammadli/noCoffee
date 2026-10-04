@@ -17,7 +17,6 @@ import 'screens/profile_screen.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/notification_settings_screen.dart';
-import 'screens/export_screen.dart';
 import 'screens/delete_data_screen.dart';
 import 'screens/name_screen.dart';
 
@@ -90,7 +89,6 @@ class _TaperAppState extends State<TaperApp> {
             '/editProfile': (_) => const EditProfileScreen(),
             '/settings': (_) => const SettingsScreen(),
             '/notificationSettings': (_) => const NotificationSettingsScreen(),
-            '/export': (_) => const ExportScreen(),
             '/deleteData': (_) => const DeleteDataScreen(),
           },
         ),

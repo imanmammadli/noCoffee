@@ -35,10 +35,7 @@ class _StatsScreenState extends State<StatsScreen> {
     return AppScaffold(
       navIndex: 3,
       body: Column(children: [
-        TopBar(
-            title: 'Statistics',
-            trailing: TIconButton(Icons.ios_share_rounded,
-                onTap: () => Navigator.pushNamed(context, '/export'))),
+        const TopBar(title: 'Statistics'),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),

@@ -41,7 +41,6 @@ class SettingsScreen extends StatelessWidget {
               _section(context, 'Data'),
               _group(context, [
                 _tile(context, Icons.refresh_rounded, 'Refresh data', value: 'Local only', onTap: () => _refresh(context)),
-                _tile(context, Icons.ios_share_rounded, 'Export data', value: 'CSV · JSON', onTap: () => Navigator.pushNamed(context, '/export')),
                 _tile(context, Icons.file_download_outlined, 'Import data', onTap: () {}),
                 _tile(context, Icons.delete_outline_rounded, 'Delete all data', danger: true, onTap: () => Navigator.pushNamed(context, '/deleteData')),
               ]),
