@@ -72,7 +72,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               const SizedBox(height: 16),
               _group(context, [
                 _toggleRow(context, 'Coffee reminders', '"Remember to track your coffee today."',
-                    n.coffeeReminders, (v) => setState(() => n.coffeeReminders = v)),
+                    n.coffeeReminders, (v) { setState(() => n.coffeeReminders = v); context.app.refresh(); }),
                 _toggleRow(context, 'Daily progress', "A summary at 20:00 with tomorrow's target",
                     n.dailyProgress, (v) => setState(() => n.dailyProgress = v)),
                 _toggleRow(context, 'Limit warning', '"You\'re getting close to your daily limit."',

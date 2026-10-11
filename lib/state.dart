@@ -1,90 +1,178 @@
-import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'models.dart';
+import 'storage.dart';
 
-/// Single in-memory store for the whole app. No backend, no auth —
-/// matches the product decision to ship without accounts.
-/// Swap this for a persisted store (Hive/sqflite) later without touching UI code.
+/// Single store for the whole app. No backend, no accounts: everything is
+/// kept on the device and saved automatically after every change.
 class AppState extends ChangeNotifier {
   ThemeMode themeMode = ThemeMode.system;
 
   bool onboardingDone = false;
   Goal onboardingGoal = Goal.reduce;
   int onboardingCups = 4;
-  Set<DrinkType> onboardingUsualDrinks = {
-    DrinkType.espresso,
-    DrinkType.cappuccino,
-    DrinkType.tea
-  };
+  Set<DrinkType> onboardingUsualDrinks = {DrinkType.espresso, DrinkType.cappuccino, DrinkType.tea};
   QuitMethod onboardingMethod = QuitMethod.gradual;
+  DateTime onboardingStartDate = DateTime.now();
+  ReductionSpeed onboardingSpeed = ReductionSpeed.steady;
 
-  final Profile profile = Profile();
-  final NotificationPrefs notifications = NotificationPrefs();
+  Profile profile = Profile();
+  NotificationPrefs notifications = NotificationPrefs();
 
   final List<CoffeeEntry> entries = [];
   final List<CravingLog> cravings = [];
   Plan? plan;
 
-  int get todayLimit => plan?.currentDailyLimit ?? 250;
+  // ---------------- persistence ----------------
 
-  List<CoffeeEntry> get todayEntries {
-    final now = DateTime.now();
-    return entries
-        .where((e) =>
-            e.time.year == now.year &&
-            e.time.month == now.month &&
-            e.time.day == now.day)
-        .toList()
-      ..sort((a, b) => a.time.compareTo(b.time));
+  Timer? _saveTimer;
+
+  /// Loads saved data from the device. Falls back to a fresh state if nothing
+  /// is saved yet, or if the saved data can't be read.
+  static Future<AppState> load() async {
+    try {
+      final data = await Storage.read();
+      if (data != null) {
+        return AppState().._apply(data);
+      }
+    } catch (e) {
+      debugPrint('Could not load saved data: $e');
+    }
+    return AppState();
   }
 
-  int get todayTotalMg => todayEntries.fold(0, (s, e) => s + e.mg);
-  int get todayRemaining => (todayLimit - todayTotalMg);
+  Map<String, dynamic> toJson() => {
+        'version': 1,
+        'themeMode': themeMode.name,
+        'onboardingDone': onboardingDone,
+        'onboardingGoal': onboardingGoal.name,
+        'onboardingCups': onboardingCups,
+        'onboardingUsualDrinks': onboardingUsualDrinks.map((d) => d.name).toList(),
+        'onboardingMethod': onboardingMethod.name,
+        'onboardingSpeed': onboardingSpeed.name,
+        'onboardingStartDate': onboardingStartDate.toIso8601String(),
+        'profile': profile.toJson(),
+        'notifications': notifications.toJson(),
+        'entries': entries.map((e) => e.toJson()).toList(),
+        'cravings': cravings.map((c) => c.toJson()).toList(),
+        'plan': plan?.toJson(),
+      };
 
-  CoffeeEntry? get lastCoffee => entries.isEmpty
-      ? null
-      : (entries.toList()..sort((a, b) => b.time.compareTo(a.time))).first;
+  void _apply(Map<String, dynamic> j) {
+    themeMode = enumByName(ThemeMode.values, j['themeMode'], ThemeMode.system);
+    onboardingDone = j['onboardingDone'] as bool? ?? false;
+    onboardingGoal = enumByName(Goal.values, j['onboardingGoal'], Goal.reduce);
+    onboardingCups = j['onboardingCups'] as int? ?? 4;
+    onboardingUsualDrinks = ((j['onboardingUsualDrinks'] as List<dynamic>?) ?? const [])
+        .map((e) => enumByName(DrinkType.values, e, DrinkType.other))
+        .toSet();
+    onboardingMethod = enumByName(QuitMethod.values, j['onboardingMethod'], QuitMethod.gradual);
+    onboardingSpeed = enumByName(ReductionSpeed.values, j['onboardingSpeed'], ReductionSpeed.steady);
+    onboardingStartDate =
+        DateTime.tryParse(j['onboardingStartDate'] as String? ?? '') ?? DateTime.now();
 
-  // --- streak: consecutive days (including today if not yet over) under the daily limit ---
+    final p = j['profile'];
+    if (p is Map<String, dynamic>) profile = Profile.fromJson(p);
+    final n = j['notifications'];
+    if (n is Map<String, dynamic>) notifications = NotificationPrefs.fromJson(n);
+
+    entries
+      ..clear()
+      ..addAll(((j['entries'] as List<dynamic>?) ?? const [])
+          .map((e) => CoffeeEntry.fromJson(e as Map<String, dynamic>)));
+    cravings
+      ..clear()
+      ..addAll(((j['cravings'] as List<dynamic>?) ?? const [])
+          .map((e) => CravingLog.fromJson(e as Map<String, dynamic>)));
+
+    final pl = j['plan'];
+    plan = pl is Map<String, dynamic> ? Plan.fromJson(pl) : null;
+    
+    // Older saves didn't store the daily cups on the profile.
+    if (profile.dailyCups == 0 && onboardingDone) profile.dailyCups = onboardingCups;
+  }
+
+  /// Every notifyListeners() also schedules a save, so no screen has to
+  /// remember to persist anything itself.
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 200), saveNow);
+  }
+
+  Future<void> saveNow() async {
+    _saveTimer?.cancel();
+    try {
+      await Storage.write(toJson());
+    } catch (e) {
+      debugPrint('Could not save data: $e');
+    }
+  }
+  // ---------------- derived values ----------------
+
+  static DateTime _dayOnly(DateTime t) => DateTime(t.year, t.month, t.day);
+  static DateTime _nextDay(DateTime d) => DateTime(d.year, d.month, d.day + 1);
+  static DateTime _prevDay(DateTime d) => DateTime(d.year, d.month, d.day - 1);
+
+  Iterable<CoffeeEntry> _entriesOn(DateTime d) => entries
+      .where((e) => e.time.year == d.year && e.time.month == d.month && e.time.day == d.day);
+
+  int _mgOn(DateTime d) => _entriesOn(d).fold(0, (s, e) => s + e.mg);
+  int _cupsOn(DateTime d) => _entriesOn(d).fold(0, (s, e) => s + e.cups);
+
+  int get todayLimit => plan?.currentDailyLimit ?? 250;
+
+  List<CoffeeEntry> get todayEntries =>
+      _entriesOn(DateTime.now()).toList()..sort((a, b) => a.time.compareTo(b.time));
+
+  int get todayTotalMg => _mgOn(DateTime.now());
+  int get todayRemaining => todayLimit - todayTotalMg;
+
+  CoffeeEntry? get lastCoffee =>
+      entries.isEmpty ? null : (entries.toList()..sort((a, b) => b.time.compareTo(a.time))).first;
+
+  /// First day that counts for streaks and savings: the plan's start date
+  /// (or the first logged entry when there is no plan). Null while the plan
+  /// hasn't started yet.
+  DateTime? get _trackingStart {
+    final p = plan;
+    if (p != null) {
+      final s = _dayOnly(p.startDate);
+      return s.isAfter(_dayOnly(DateTime.now())) ? null : s;
+    }
+    if (entries.isEmpty) return null;
+    return _dayOnly(entries.map((e) => e.time).reduce((a, b) => a.isBefore(b) ? a : b));
+  }
+
+  /// Consecutive days (ending today) at or under the daily limit.
+  /// A day without any drinks counts as under the limit. Today is skipped
+  /// while it is still empty, because it isn't over yet.
   int get streak {
-    int count = 0;
-    DateTime day = DateTime.now();
-    for (int i = 0; i < 60; i++) {
-      final dayEntries = entries.where((e) =>
-          e.time.year == day.year &&
-          e.time.month == day.month &&
-          e.time.day == day.day);
-      final total = dayEntries.fold(0, (s, e) => s + e.mg);
-      final isToday = i == 0;
-      if (isToday && dayEntries.isEmpty) {
-        // today not over yet — don't break the streak on an empty today
-        day = day.subtract(const Duration(days: 1));
-        continue;
-      }
+    final start = _trackingStart;
+    if (start == null) return 0;
+    final today = _dayOnly(DateTime.now());
+    var count = 0;
+    for (var d = today; !d.isBefore(start); d = _prevDay(d)) {
+      final total = _mgOn(d);
+      if (d == today && total == 0) continue;
       if (total <= todayLimit) {
         count++;
       } else {
         break;
       }
-      day = day.subtract(const Duration(days: 1));
     }
     return count;
   }
 
+  /// Finished days since the start with no drinks at all.
   int get coffeeFreeDaysCount {
-    final byDay = <String, int>{};
-    for (final e in entries) {
-      final k = '${e.time.year}-${e.time.month}-${e.time.day}';
-      byDay[k] = (byDay[k] ?? 0) + e.mg;
-    }
-    final start =
-        plan?.startDate ?? DateTime.now().subtract(const Duration(days: 12));
-    int free = 0;
-    for (var d = start;
-        d.isBefore(DateTime.now());
-        d = d.add(const Duration(days: 1))) {
-      final k = '${d.year}-${d.month}-${d.day}';
-      if (!byDay.containsKey(k)) free++;
+    final start = _trackingStart;
+    if (start == null) return 0;
+    final today = _dayOnly(DateTime.now());
+    var free = 0;
+    for (var d = start; d.isBefore(today); d = _nextDay(d)) {
+      if (_entriesOn(d).isEmpty) free++;
     }
     return free;
   }
@@ -92,16 +180,33 @@ class AppState extends ChangeNotifier {
   int get cravingsResisted => cravings.where((c) => c.resisted).length;
   int get cravingsTotal => cravings.length;
 
+  /// Cups you didn't drink compared with your usual daily amount, times the
+  /// coffee price. Finished days count in full (a heavy day never cancels
+  /// a good one). Today counts in proportion to how much of the day has
+  /// passed, so the number moves as you log drinks.
   double get moneySaved {
-    final avgCupsBefore = onboardingCups;
-    final daysTracked = max(
-        1, DateTime.now().difference(plan?.startDate ?? DateTime.now()).inDays);
-    final cupsNowPerDay = todayEntries.length; // rough proxy
-    final cupsAvoidedPerDay = max(0, avgCupsBefore - cupsNowPerDay);
-    return cupsAvoidedPerDay * profile.coffeePrice * daysTracked / 3;
-  }
+    final start = _trackingStart;
+    if (start == null) return 0;
+    final baseline = profile.dailyCups > 0 ? profile.dailyCups : onboardingCups;
+    final now = DateTime.now();
+    final today = _dayOnly(now);
 
-  // ---- mutations ----
+    double avoided = 0;
+    for (var d = start; d.isBefore(today); d = _nextDay(d)) {
+      final left = baseline - _cupsOn(d);
+      if (left > 0) avoided += left;
+    }
+    final dayFraction = now.difference(today).inMinutes / 1440.0;
+    final leftToday = baseline * dayFraction - _cupsOn(today);
+    if (leftToday > 0) avoided += leftToday;
+
+    return avoided * profile.coffeePrice;
+  }
+  // ---------------- mutations ----------------
+
+  /// Public trigger for UI rebuilds + saving after mutating fields directly
+  /// (e.g. editing `profile` or `plan` from a form).
+  void refresh() => notifyListeners();
 
   void addEntry(DrinkType type, int cups, int mg, DateTime time) {
     entries.add(CoffeeEntry(
@@ -114,8 +219,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateEntry(String id,
-      {DrinkType? drink, int? cups, int? mg, DateTime? time}) {
+  void updateEntry(String id, {DrinkType? drink, int? cups, int? mg, DateTime? time}) {
     final e = entries.firstWhere((e) => e.id == id);
     if (drink != null) e.drink = drink;
     if (cups != null) e.cups = cups;
@@ -133,9 +237,6 @@ class AppState extends ChangeNotifier {
     cravings.add(CravingLog(level, resisted, DateTime.now()));
     notifyListeners();
   }
-
-    DateTime onboardingStartDate = DateTime.now();
-  ReductionSpeed onboardingSpeed = ReductionSpeed.steady;
 
   void buildPlanFromOnboarding() {
     final estimateMg = onboardingCups * 90;
@@ -190,84 +291,52 @@ class AppState extends ChangeNotifier {
       }
     }
   }
-
   void completeOnboarding() {
     buildPlanFromOnboarding();
+    profile.dailyCups = onboardingCups;
     onboardingDone = true;
     notifyListeners();
   }
-
-  void refresh() => notifyListeners();
-
   void setThemeMode(ThemeMode m) {
     themeMode = m;
     notifyListeners();
   }
 
+  /// Wipes everything: history, plan, profile and settings.
   void deleteAllData() {
     entries.clear();
     cravings.clear();
     plan = null;
+    profile = Profile();
+    notifications = NotificationPrefs();
     onboardingDone = false;
+    onboardingGoal = Goal.reduce;
+    onboardingCups = 4;
+    onboardingUsualDrinks = {DrinkType.espresso, DrinkType.cappuccino, DrinkType.tea};
+    onboardingMethod = QuitMethod.gradual;
+    onboardingStartDate = DateTime.now();
+    onboardingSpeed = ReductionSpeed.steady;
     notifyListeners();
   }
 
-  void seedDemoData() {
-    final now = DateTime.now();
-    entries.addAll([
-      CoffeeEntry(
-          id: 'seed1',
-          drink: DrinkType.espresso,
-          cups: 1,
-          mg: 80,
-          time: DateTime(now.year, now.month, now.day, 8, 30)),
-      CoffeeEntry(
-          id: 'seed2',
-          drink: DrinkType.cappuccino,
-          cups: 1,
-          mg: 75,
-          time: DateTime(now.year, now.month, now.day, 12, 15)),
-    ]);
-    cravings.addAll([
-      CravingLog(4, true, now.subtract(const Duration(hours: 3))),
-      CravingLog(3, true, now.subtract(const Duration(days: 1))),
-      CravingLog(5, false, now.subtract(const Duration(days: 2))),
-    ]);
-    notifyListeners();
-  }
+  // ---------------- achievements ----------------
 
   List<Achievement> get achievements => [
-        Achievement(
-            'first_day',
-            '🏆',
-            'First day',
-            (s) => entries.isNotEmpty || plan != null,
+        Achievement('first_day', '🏆', 'First day', (s) => entries.isNotEmpty || plan != null,
             (s) => 'Log your first entry'),
         Achievement('streak3', '🔥', '3 day streak', (s) => s.streak >= 3,
             (s) => '${s.streak.clamp(0, 3)} of 3'),
         Achievement('streak7', '🔥', '7 day streak', (s) => s.streak >= 7,
             (s) => '${s.streak.clamp(0, 7)} of 7'),
-        Achievement(
-            'week1',
-            '🎯',
-            'First week completed',
-            (s) => s.firstWeekDone,
+        Achievement('week1', '🎯', 'First week completed', (s) => s.firstWeekDone,
             (s) => s.firstWeekDone ? 'Done' : 'In progress'),
         Achievement('streak14', '🔥', '14 day streak', (s) => s.streak >= 14,
             (s) => '${s.streak.clamp(0, 14)} of 14'),
-        Achievement(
-            'coffees50',
-            '☕',
-            '50 coffees avoided',
-            (s) => s.cravingsResisted >= 50,
+        Achievement('coffees50', '☕', '50 coffees avoided', (s) => s.cravingsResisted >= 50,
             (s) => '${s.cravingsResisted} of 50'),
         Achievement('saved10', '💰', 'First 10 saved', (s) => s.moneySaved >= 10,
             (s) => '${s.moneySaved.toStringAsFixed(0)} of 10'),
-        Achievement(
-            'challenge30',
-            '🏅',
-            '30 day challenge',
-            (s) => s.daysIntoChallenge >= 30,
+        Achievement('challenge30', '🏅', '30 day challenge', (s) => s.daysIntoChallenge >= 30,
             (s) => 'Day ${s.daysIntoChallenge.clamp(0, 30)} of 30'),
       ];
 

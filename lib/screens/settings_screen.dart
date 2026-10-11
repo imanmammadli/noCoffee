@@ -19,7 +19,9 @@ class SettingsScreen extends StatelessWidget {
             children: [
               _section(context, 'Account'),
               _group(context, [
-                _tile(context, Icons.person_outline_rounded, 'Personal information', onTap: () => Navigator.pushNamed(context, '/editProfile')),
+                _tile(context, Icons.person_outline_rounded,
+                    'Personal information',
+                    onTap: () => Navigator.pushNamed(context, '/editProfile')),
               ]),
               _section(context, 'Notifications'),
               _group(context, [
@@ -46,8 +48,6 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 8),
               _section(context, 'Data'),
               _group(context, [
-                _tile(context, Icons.refresh_rounded, 'Refresh data',
-                    value: 'Local only', onTap: () => _refresh(context)),
                 _tile(context, Icons.delete_outline_rounded, 'Delete all data',
                     danger: true,
                     onTap: () => Navigator.pushNamed(context, '/deleteData')),
@@ -148,7 +148,9 @@ class SettingsScreen extends StatelessWidget {
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(icon, size: 15, color: on ? c.bg : c.inkMuted),
                   const SizedBox(width: 6),
-                  Text(label, style: AppText.tiny(on ? c.bg : c.inkMuted).copyWith(fontSize: 13)),
+                  Text(label,
+                      style: AppText.tiny(on ? c.bg : c.inkMuted)
+                          .copyWith(fontSize: 13)),
                 ]),
               ),
             ),
@@ -158,37 +160,4 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _refresh(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        Future.delayed(const Duration(milliseconds: 900), () {
-          if (ctx.mounted) Navigator.pop(ctx);
-        });
-        final c = ctx.colors;
-        return Dialog(
-          backgroundColor: c.surface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(22),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2.4, color: c.coffee)),
-              const SizedBox(width: 14),
-              Text('Updating your data…',
-                  style: AppText.body(c.ink)
-                      .copyWith(fontWeight: FontWeight.w600)),
-            ]),
-          ),
-        );
-      },
-    ).then((_) {
-      if (context.mounted) showTaperToast(context, 'Your data is up to date');
-    });
-  }
 }

@@ -81,6 +81,7 @@ class WeekDetailScreen extends StatelessWidget {
                   week.completed = true;
                   plan.currentWeekIndex++;
                   plan.currentDailyLimit = plan.weeks[plan.currentWeekIndex].targetMg;
+                                    app.refresh();
                   Navigator.pop(context);
                   showTaperToast(context, 'Week ${plan.currentWeekIndex + 1} started');
                 }),

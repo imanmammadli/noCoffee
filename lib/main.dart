@@ -23,26 +23,42 @@ import 'notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final state = await AppState.load();
   final motivationOn = await NotificationService.instance.init();
-  runApp(TaperApp(motivationOn: motivationOn));
+  runApp(TaperApp(state: state, motivationOn: motivationOn));
 }
 
 class TaperApp extends StatefulWidget {
+  final AppState? state;
   final bool motivationOn;
-  const TaperApp({super.key, this.motivationOn = false});
+  const TaperApp({super.key, this.state, this.motivationOn = false});
 
   @override
   State<TaperApp> createState() => _TaperAppState();
 }
 
-class _TaperAppState extends State<TaperApp> {
-  final AppState state = AppState();
+class _TaperAppState extends State<TaperApp> with WidgetsBindingObserver {
+  late final AppState state = widget.state ?? AppState();
 
   @override
   void initState() {
     super.initState();
+    // The phone's scheduled notifications are the source of truth for this toggle.
     state.notifications.motivation = widget.motivationOn;
     state.addListener(() => setState(() {}));
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    // Save right away when the app leaves the foreground.
+    if (s != AppLifecycleState.resumed) state.saveNow();
   }
 
   @override

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../notification_service.dart';
+
 
 class DeleteDataScreen extends StatelessWidget {
   const DeleteDataScreen({super.key});
@@ -42,10 +44,11 @@ class DeleteDataScreen extends StatelessWidget {
                   style: AppText.tiny(c.danger)
                       .copyWith(fontSize: 13, fontWeight: FontWeight.w700)),
               const SizedBox(height: 14),
-              TButton('Delete everything', style: TBtnStyle.danger, onTap: () {
+              TButton('Delete everything', style: TBtnStyle.danger, onTap: () async {
+                await NotificationService.instance.cancelMotivation();
                 app.deleteAllData();
-                Navigator.pushNamedAndRemoveUntil(
-                    context, '/welcome', (r) => false);
+                if (!context.mounted) return;
+                Navigator.pushNamedAndRemoveUntil(context, '/welcome', (r) => false);
               }),
               const SizedBox(height: 10),
               TButton('Cancel',
