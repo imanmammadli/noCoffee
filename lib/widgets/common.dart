@@ -36,7 +36,8 @@ class TaperNavBar extends StatelessWidget {
     final c = context.colors;
     return Container(
       height: 74,
-      decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.line))),
+      decoration: BoxDecoration(
+          color: c.surface, border: Border(top: BorderSide(color: c.line))),
       child: Row(
         children: List.generate(_items.length, (i) {
           final on = i == index;
@@ -45,17 +46,20 @@ class TaperNavBar extends StatelessWidget {
             child: InkWell(
               onTap: on
                   ? null
-                  : () => Navigator.pushNamedAndRemoveUntil(context, _routes[i], (r) => false),
+                  : () => Navigator.pushNamedAndRemoveUntil(
+                      context, _routes[i], (r) => false),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                     decoration: BoxDecoration(
                       color: on ? c.accentSoft : Colors.transparent,
                       borderRadius: BorderRadius.circular(99),
                     ),
-                    child: Icon(icon, size: 22, color: on ? c.accent : c.inkMuted),
+                    child:
+                        Icon(icon, size: 22, color: on ? c.accent : c.inkMuted),
                   ),
                   const SizedBox(height: 3),
                   Text(label, style: AppText.tiny(on ? c.accent : c.inkMuted)),
@@ -73,7 +77,8 @@ class TopBar extends StatelessWidget {
   final String title;
   final Widget? trailing;
   final bool back;
-  const TopBar({super.key, required this.title, this.trailing, this.back = false});
+  const TopBar(
+      {super.key, required this.title, this.trailing, this.back = false});
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +90,8 @@ class TopBar extends StatelessWidget {
           if (back)
             IconButton(
               onPressed: () => Navigator.maybePop(context),
-              icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: c.ink),
+              icon: Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: c.ink),
             ),
           Expanded(
             child: Text(title,
@@ -127,7 +133,8 @@ class TCard extends StatelessWidget {
         boxShadow: lift
             ? [
                 BoxShadow(
-                    color: Colors.black.withOpacity(c.brightness == Brightness.dark ? 0.45 : 0.12),
+                    color: Colors.black.withOpacity(
+                        c.brightness == Brightness.dark ? 0.45 : 0.12),
                     blurRadius: 26,
                     offset: const Offset(0, 10))
               ]
@@ -147,7 +154,11 @@ class TButton extends StatelessWidget {
   final IconData? icon;
   final bool small;
   const TButton(this.label,
-      {super.key, this.onTap, this.style = TBtnStyle.primary, this.icon, this.small = false});
+      {super.key,
+      this.onTap,
+      this.style = TBtnStyle.primary,
+      this.icon,
+      this.small = false});
 
   @override
   Widget build(BuildContext context) {
@@ -157,11 +168,15 @@ class TButton extends StatelessWidget {
     switch (style) {
       case TBtnStyle.primary:
         bg = c.coffee;
-        fg = c.brightness == Brightness.dark ? const Color(0xFF1B1410) : const Color(0xFFFFF9F1);
+        fg = c.brightness == Brightness.dark
+            ? const Color(0xFF1B1410)
+            : const Color(0xFFFFF9F1);
         break;
       case TBtnStyle.accent:
         bg = c.accent;
-        fg = c.brightness == Brightness.dark ? const Color(0xFF10201A) : const Color(0xFFF2FBF7);
+        fg = c.brightness == Brightness.dark
+            ? const Color(0xFF10201A)
+            : const Color(0xFFF2FBF7);
         break;
       case TBtnStyle.secondary:
         bg = Colors.transparent;
@@ -188,12 +203,18 @@ class TButton extends StatelessWidget {
           onTap: onTap,
           child: Container(
             decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(small ? 15 : 18), border: border),
+                borderRadius: BorderRadius.circular(small ? 15 : 18),
+                border: border),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (icon != null) ...[Icon(icon, size: 19, color: fg), const SizedBox(width: 8)],
-                Text(label, style: AppText.button(fg).copyWith(fontSize: small ? 14.5 : 16)),
+                if (icon != null) ...[
+                  Icon(icon, size: 19, color: fg),
+                  const SizedBox(width: 8)
+                ],
+                Text(label,
+                    style: AppText.button(fg)
+                        .copyWith(fontSize: small ? 14.5 : 16)),
               ],
             ),
           ),
@@ -208,7 +229,8 @@ class TIconButton extends StatelessWidget {
   final VoidCallback? onTap;
   final bool plain;
   final Color? color;
-  const TIconButton(this.icon, {super.key, this.onTap, this.plain = false, this.color});
+  const TIconButton(this.icon,
+      {super.key, this.onTap, this.plain = false, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +244,9 @@ class TIconButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: SizedBox(
-            width: 42, height: 42, child: Icon(icon, size: 19, color: color ?? c.ink)),
+            width: 42,
+            height: 42,
+            child: Icon(icon, size: 19, color: color ?? c.ink)),
       ),
     );
   }
@@ -243,15 +267,26 @@ class TChip extends StatelessWidget {
       onTap: onTap,
       child: Container(
         height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: on ? c.ink : c.surface2,
           borderRadius: const BorderRadius.all(rChip),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (icon != null) ...[Icon(icon, size: 14, color: on ? c.bg : c.inkMuted), const SizedBox(width: 5)],
-          Text(label, style: AppText.tiny(on ? c.bg : c.inkMuted).copyWith(fontSize: 13)),
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: on ? c.bg : c.inkMuted),
+            const SizedBox(width: 5)
+          ],
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style:
+                  AppText.tiny(on ? c.bg : c.inkMuted).copyWith(fontSize: 13),
+            ),
+          ),
         ]),
       ),
     );
@@ -269,8 +304,11 @@ class TPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       height: 24,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.all(rChip)),
-      child: Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: fg)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: const BorderRadius.all(rChip)),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 11.5, fontWeight: FontWeight.w700, color: fg)),
     );
   }
 }
@@ -282,7 +320,12 @@ class ProgressRing extends StatelessWidget {
   final Widget? center;
   final Color? color;
   const ProgressRing(
-      {super.key, required this.value, this.size = 186, this.stroke = 13, this.center, this.color});
+      {super.key,
+      required this.value,
+      this.size = 186,
+      this.stroke = 13,
+      this.center,
+      this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -294,7 +337,10 @@ class ProgressRing extends StatelessWidget {
         CustomPaint(
           size: Size(size, size),
           painter: _RingPainter(
-              value: value.clamp(0, 1.15), track: c.ring, color: color ?? c.accent, stroke: stroke),
+              value: value.clamp(0, 1.15),
+              track: c.ring,
+              color: color ?? c.accent,
+              stroke: stroke),
         ),
         if (center != null) center!,
       ]),
@@ -305,7 +351,11 @@ class ProgressRing extends StatelessWidget {
 class _RingPainter extends CustomPainter {
   final double value, stroke;
   final Color track, color;
-  _RingPainter({required this.value, required this.track, required this.color, required this.stroke});
+  _RingPainter(
+      {required this.value,
+      required this.track,
+      required this.color,
+      required this.stroke});
   @override
   void paint(Canvas canvas, Size size) {
     final r = (size.width - stroke) / 2;
@@ -322,7 +372,8 @@ class _RingPainter extends CustomPainter {
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round;
     final sweep = 2 * pi * value.clamp(0, 1);
-    canvas.drawArc(Rect.fromCircle(center: center, radius: r), -pi / 2, sweep, false, fg);
+    canvas.drawArc(
+        Rect.fromCircle(center: center, radius: r), -pi / 2, sweep, false, fg);
   }
 
   @override
@@ -385,12 +436,14 @@ class SelectRow extends StatelessWidget {
             height: 44,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-                color: on ? c.bg : c.surface2, borderRadius: BorderRadius.circular(14)),
+                color: on ? c.bg : c.surface2,
+                borderRadius: BorderRadius.circular(14)),
             child: Text(emoji, style: const TextStyle(fontSize: 20)),
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: AppText.h3(c.ink)),
               const SizedBox(height: 3),
               Text(subtitle, style: AppText.tiny(c.inkMuted)),
@@ -409,7 +462,12 @@ class TInput extends StatelessWidget {
   final String value;
   final IconData? icon;
   final VoidCallback? onTap;
-  const TInput({super.key, required this.label, required this.value, this.icon, this.onTap});
+  const TInput(
+      {super.key,
+      required this.label,
+      required this.value,
+      this.icon,
+      this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -425,10 +483,15 @@ class TInput extends StatelessWidget {
             borderRadius: BorderRadius.circular(17),
             border: Border.all(color: c.line2, width: 1.4)),
         child: Row(children: [
-          if (icon != null) ...[Icon(icon, size: 18, color: c.inkMuted), const SizedBox(width: 10)],
-          Text(label, style: AppText.body(c.ink).copyWith(fontWeight: FontWeight.w600)),
+          if (icon != null) ...[
+            Icon(icon, size: 18, color: c.inkMuted),
+            const SizedBox(width: 10)
+          ],
+          Text(label,
+              style: AppText.body(c.ink).copyWith(fontWeight: FontWeight.w600)),
           const Spacer(),
-          Text(value, style: AppText.body(c.ink).copyWith(fontWeight: FontWeight.w700)),
+          Text(value,
+              style: AppText.body(c.ink).copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(width: 6),
           Icon(Icons.chevron_right_rounded, size: 18, color: c.inkMuted),
         ]),
@@ -464,7 +527,10 @@ class TToggle extends StatelessWidget {
             decoration: BoxDecoration(
               color: value ? Colors.white : c.bg,
               shape: BoxShape.circle,
-              boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 1))],
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black26, blurRadius: 3, offset: Offset(0, 1))
+              ],
             ),
           ),
         ),
@@ -485,7 +551,8 @@ void showTaperSheet(BuildContext context, Widget child) {
         child: Container(
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: const BorderRadius.only(topLeft: rSheet, topRight: rSheet),
+            borderRadius:
+                const BorderRadius.only(topLeft: rSheet, topRight: rSheet),
           ),
           padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
           child: SafeArea(
@@ -495,7 +562,8 @@ void showTaperSheet(BuildContext context, Widget child) {
                   width: 40,
                   height: 5,
                   margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(color: c.line2, borderRadius: BorderRadius.circular(99))),
+                  decoration: BoxDecoration(
+                      color: c.line2, borderRadius: BorderRadius.circular(99))),
               child,
             ]),
           ),
@@ -519,21 +587,28 @@ void showTaperToast(BuildContext context, String text, {bool isError = false}) {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-              color: c.ink, borderRadius: BorderRadius.circular(18),
-              boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 20, offset: Offset(0, 8))]),
+              color: c.ink,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black38, blurRadius: 20, offset: Offset(0, 8))
+              ]),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Container(
               width: 26,
               height: 26,
-              decoration:
-                  BoxDecoration(color: isError ? c.danger : c.accent, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                  color: isError ? c.danger : c.accent, shape: BoxShape.circle),
               child: Icon(isError ? Icons.close_rounded : Icons.check_rounded,
                   size: 15, color: Colors.white),
             ),
             const SizedBox(width: 11),
             Flexible(
                 child: Text(text,
-                    style: TextStyle(color: c.bg, fontWeight: FontWeight.w700, fontSize: 14))),
+                    style: TextStyle(
+                        color: c.bg,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14))),
           ]),
         ),
       ),
@@ -547,7 +622,11 @@ class InsightCard extends StatelessWidget {
   final String text;
   final IconData icon;
   final Color? color;
-  const InsightCard({super.key, required this.text, this.icon = Icons.auto_awesome_rounded, this.color});
+  const InsightCard(
+      {super.key,
+      required this.text,
+      this.icon = Icons.auto_awesome_rounded,
+      this.color});
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -558,7 +637,10 @@ class InsightCard extends StatelessWidget {
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(icon, size: 18, color: col),
         const SizedBox(width: 10),
-        Expanded(child: Text(text, style: AppText.body(c.ink).copyWith(fontWeight: FontWeight.w600, fontSize: 13.5))),
+        Expanded(
+            child: Text(text,
+                style: AppText.body(c.ink)
+                    .copyWith(fontWeight: FontWeight.w600, fontSize: 13.5))),
       ]),
     );
   }
@@ -588,13 +670,15 @@ class EmptyState extends StatelessWidget {
           Container(
             width: 84,
             height: 84,
-            decoration: BoxDecoration(color: c.surface2, shape: BoxShape.circle),
+            decoration:
+                BoxDecoration(color: c.surface2, shape: BoxShape.circle),
             child: Icon(icon, size: 34, color: c.inkMuted),
           ),
           const SizedBox(height: 20),
           Text(title, style: AppText.h2(c.ink), textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          Text(subtitle, style: AppText.body(c.inkMuted), textAlign: TextAlign.center),
+          Text(subtitle,
+              style: AppText.body(c.inkMuted), textAlign: TextAlign.center),
           if (ctaLabel != null) ...[
             const SizedBox(height: 20),
             SizedBox(width: 180, child: TButton(ctaLabel!, onTap: onCta)),
@@ -609,7 +693,8 @@ class ErrorCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback? onRetry;
-  const ErrorCard({super.key, required this.title, required this.subtitle, this.onRetry});
+  const ErrorCard(
+      {super.key, required this.title, required this.subtitle, this.onRetry});
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -619,7 +704,8 @@ class ErrorCard extends StatelessWidget {
         Icon(Icons.error_outline_rounded, color: c.danger, size: 20),
         const SizedBox(width: 12),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title, style: AppText.h3(c.ink)),
             const SizedBox(height: 4),
             Text(subtitle, style: AppText.tiny(c.inkMuted)),

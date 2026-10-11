@@ -43,13 +43,15 @@ class AchievementsScreen extends StatelessWidget {
                 ]),
               ),
               const SizedBox(height: 16),
-              GridView.count(
-                crossAxisCount: 2,
+              GridView(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.35,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  mainAxisExtent: 140,
+                ),
                 children: list.map((a) {
                   final on = a.isUnlocked(snap);
                   return Opacity(

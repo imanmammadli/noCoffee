@@ -20,35 +20,46 @@ class SettingsScreen extends StatelessWidget {
               _section(context, 'Account'),
               _group(context, [
                 _tile(context, Icons.person_outline_rounded, 'Personal information', onTap: () => Navigator.pushNamed(context, '/editProfile')),
-                _tile(context, Icons.mail_outline_rounded, 'Change email', onTap: () {}),
-                _tile(context, Icons.lock_outline_rounded, 'Change password', onTap: () {}),
-                _tile(context, Icons.logout_rounded, 'Log out', onTap: () {}),
-                _tile(context, Icons.delete_outline_rounded, 'Delete account', danger: true, onTap: () => Navigator.pushNamed(context, '/deleteData')),
               ]),
               _section(context, 'Notifications'),
               _group(context, [
-                _tile(context, Icons.notifications_none_rounded, 'Notifications', value: '${_onCount(app)} on', onTap: () => Navigator.pushNamed(context, '/notificationSettings')),
+                _tile(
+                    context, Icons.notifications_none_rounded, 'Notifications',
+                    value: '${_onCount(app)} on',
+                    onTap: () =>
+                        Navigator.pushNamed(context, '/notificationSettings')),
               ]),
               _section(context, 'Appearance'),
               Row(children: [
-                Expanded(child: _themeChip(context, 'Light', Icons.wb_sunny_outlined, ThemeMode.light)),
+                Expanded(
+                    child: _themeChip(context, 'Light', Icons.wb_sunny_outlined,
+                        ThemeMode.light)),
                 const SizedBox(width: 8),
-                Expanded(child: _themeChip(context, 'Dark', Icons.nightlight_round, ThemeMode.dark)),
+                Expanded(
+                    child: _themeChip(context, 'Dark', Icons.nightlight_round,
+                        ThemeMode.dark)),
                 const SizedBox(width: 8),
-                Expanded(child: _themeChip(context, 'System', Icons.smartphone_rounded, ThemeMode.system)),
+                Expanded(
+                    child: _themeChip(context, 'System',
+                        Icons.smartphone_rounded, ThemeMode.system)),
               ]),
               const SizedBox(height: 8),
               _section(context, 'Data'),
               _group(context, [
-                _tile(context, Icons.refresh_rounded, 'Refresh data', value: 'Local only', onTap: () => _refresh(context)),
-                _tile(context, Icons.file_download_outlined, 'Import data', onTap: () {}),
-                _tile(context, Icons.delete_outline_rounded, 'Delete all data', danger: true, onTap: () => Navigator.pushNamed(context, '/deleteData')),
+                _tile(context, Icons.refresh_rounded, 'Refresh data',
+                    value: 'Local only', onTap: () => _refresh(context)),
+                _tile(context, Icons.delete_outline_rounded, 'Delete all data',
+                    danger: true,
+                    onTap: () => Navigator.pushNamed(context, '/deleteData')),
               ]),
               _section(context, 'Support'),
               _group(context, [
-                _tile(context, Icons.help_outline_rounded, 'Help centre & FAQ', onTap: () {}),
-                _tile(context, Icons.mail_outline_rounded, 'Contact support', onTap: () {}),
-                _tile(context, Icons.privacy_tip_outlined, 'Privacy & terms', onTap: () {}),
+                _tile(context, Icons.help_outline_rounded, 'Help centre & FAQ',
+                    onTap: () {}),
+                _tile(context, Icons.mail_outline_rounded, 'Contact support',
+                    onTap: () {}),
+                _tile(context, Icons.privacy_tip_outlined, 'Privacy & terms',
+                    onTap: () {}),
               ]),
             ],
           ),
@@ -59,7 +70,13 @@ class SettingsScreen extends StatelessWidget {
 
   int _onCount(AppState app) {
     final n = app.notifications;
-    return [n.coffeeReminders, n.dailyProgress, n.limitWarning, n.streakReminders, n.motivation].where((e) => e).length;
+    return [
+      n.coffeeReminders,
+      n.dailyProgress,
+      n.limitWarning,
+      n.streakReminders,
+      n.motivation
+    ].where((e) => e).length;
   }
 
   Widget _section(BuildContext context, String title) {
@@ -74,17 +91,20 @@ class SettingsScreen extends StatelessWidget {
     final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18),
-      decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(22), border: Border.all(color: c.line)),
+      decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: c.line)),
       child: Column(
-        children: tiles
-            .expand((t) => [t, Divider(color: c.line, height: 1)])
-            .toList()
-          ..removeLast(),
+        children:
+            tiles.expand((t) => [t, Divider(color: c.line, height: 1)]).toList()
+              ..removeLast(),
       ),
     );
   }
 
-  Widget _tile(BuildContext context, IconData icon, String label, {String? value, bool danger = false, VoidCallback? onTap}) {
+  Widget _tile(BuildContext context, IconData icon, String label,
+      {String? value, bool danger = false, VoidCallback? onTap}) {
     final c = context.colors;
     return InkWell(
       onTap: onTap,
@@ -95,7 +115,8 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
             child: Text(label,
-                style: AppText.body(danger ? c.danger : c.ink).copyWith(fontWeight: FontWeight.w600, fontSize: 14.5)),
+                style: AppText.body(danger ? c.danger : c.ink)
+                    .copyWith(fontWeight: FontWeight.w600, fontSize: 14.5)),
           ),
           if (value != null) Text(value, style: AppText.tiny(c.inkMuted)),
           const SizedBox(width: 4),
@@ -105,7 +126,8 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _themeChip(BuildContext context, String label, IconData icon, ThemeMode mode) {
+  Widget _themeChip(
+      BuildContext context, String label, IconData icon, ThemeMode mode) {
     final app = context.app;
     final on = app.themeMode == mode;
     return InkWell(
@@ -115,12 +137,22 @@ class SettingsScreen extends StatelessWidget {
         final c = context.colors;
         return Container(
           height: 44,
-          decoration: BoxDecoration(color: on ? c.ink : c.surface2, borderRadius: BorderRadius.circular(99)),
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(icon, size: 15, color: on ? c.bg : c.inkMuted),
-            const SizedBox(width: 6),
-            Text(label, style: AppText.tiny(on ? c.bg : c.inkMuted).copyWith(fontSize: 13)),
-          ]),
+          decoration: BoxDecoration(
+              color: on ? c.ink : c.surface2,
+              borderRadius: BorderRadius.circular(99)),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(icon, size: 15, color: on ? c.bg : c.inkMuted),
+                  const SizedBox(width: 6),
+                  Text(label, style: AppText.tiny(on ? c.bg : c.inkMuted).copyWith(fontSize: 13)),
+                ]),
+              ),
+            ),
+          ),
         );
       }),
     );
@@ -137,13 +169,20 @@ class SettingsScreen extends StatelessWidget {
         final c = ctx.colors;
         return Dialog(
           backgroundColor: c.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Padding(
             padding: const EdgeInsets.all(22),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: c.coffee)),
+              SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2.4, color: c.coffee)),
               const SizedBox(width: 14),
-              Text('Updating your data…', style: AppText.body(c.ink).copyWith(fontWeight: FontWeight.w600)),
+              Text('Updating your data…',
+                  style: AppText.body(c.ink)
+                      .copyWith(fontWeight: FontWeight.w600)),
             ]),
           ),
         );
