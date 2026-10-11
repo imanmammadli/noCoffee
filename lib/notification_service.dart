@@ -121,7 +121,7 @@ class NotificationService {
 
       await _plugin.zonedSchedule(
         id: _firstId + i,
-        title: 'Taper',
+        title: 'NoCoffee',
         body: message,
         scheduledDate: when,
         notificationDetails: _details,
@@ -143,7 +143,7 @@ class NotificationService {
     final message = kMotivationMessages[DateTime.now().second % kMotivationMessages.length];
     await _plugin.show(
       id: _testId,
-      title: 'Taper',
+      title: 'NoCoffee',
       body: message,
       notificationDetails: _details,
     );
@@ -184,7 +184,7 @@ class NotificationService {
           if (skip != null && skip(isToday)) continue;
           await _plugin.zonedSchedule(
             id: baseId + i,
-            title: 'Taper',
+            title: 'NoCoffee',
             body: body(DateTime(when.year, when.month, when.day), isToday),
             scheduledDate: when,
             notificationDetails: _details,

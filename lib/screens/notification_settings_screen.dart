@@ -147,7 +147,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Taper · now', style: AppText.tiny(c.ink)),
+                      Text('NoCoffee · now', style: AppText.tiny(c.ink)),
                       Text('Small steps create big changes.', style: AppText.tiny(c.inkMuted)),
                     ]),
                   ),

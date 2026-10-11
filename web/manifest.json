@@ -1,6 +1,6 @@
 {
-    "name": "no_coffee_app",
-    "short_name": "no_coffee_app",
+    "name": "NoCoffee",
+    "short_name": "NoCoffee",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#023E23",

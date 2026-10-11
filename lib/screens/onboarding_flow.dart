@@ -401,7 +401,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       Padding(
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
         child: Text(
-          'Taper is a tracking tool, not medical advice. If you have a health condition, are pregnant or take medication, talk to your doctor before changing your caffeine intake.',
+          'NoCoffee is a tracking tool, not medical advice. If you have a health condition, are pregnant or take medication, talk to your doctor before changing your caffeine intake.',
           style: AppText.tiny(c.inkMuted),
           textAlign: TextAlign.center,
         ),

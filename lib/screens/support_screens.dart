@@ -78,7 +78,7 @@ class FaqScreen extends StatelessWidget {
     ),
     (
       'Why am I not getting notifications?',
-      'Turn them on in Settings › Notifications and allow notifications for Taper in your phone settings. Some phones also limit background activity for apps; if reminders arrive late, exclude Taper from battery optimisation.'
+      'Turn them on in Settings › Notifications and allow notifications for NoCoffee in your phone settings. Some phones also limit background activity for apps; if reminders arrive late, exclude NoCoffee from battery optimisation.'
     ),
   ];
 
@@ -140,7 +140,7 @@ class ContactScreen extends StatelessWidget {
         }),
         _heading(context, 'Helpful to include'),
         _para(context, '• What you were doing when it happened\n• Your phone model and Android/iOS version\n• A screenshot, if you can'),
-        _para(context, 'Please don’t send health details you’d rather keep private. Taper never needs them to help you.'),
+        _para(context, 'Please don’t send health details you’d rather keep private. NoCoffee never needs them to help you.'),
       ],
     );
   }
@@ -162,14 +162,14 @@ class LegalScreen extends StatelessWidget {
     return _Page(title: 'Privacy & terms', children: [
       _heading(context, 'Privacy'),
       _para(context,
-          'Taper has no accounts and no servers. Everything you enter (drinks, plan, cravings, profile) is stored only on your device.'),
+          'NoCoffee has no accounts and no servers. Everything you enter (drinks, plan, cravings, profile) is stored only on your device.'),
       _para(context,
           'We do not collect analytics, advertising identifiers or location. Notifications are created on your device and are not sent from any server.'),
       _para(context,
           'Because your data lives on your device, we cannot recover it if you delete the app or lose the phone. You can erase everything at any time with Settings › Delete all data.'),
       _heading(context, 'Terms of use'),
       _para(context,
-          'Taper is provided “as is”, without warranties. Caffeine amounts, limits and plans are estimates and may be inaccurate.'),
+          'NoCoffee is provided “as is”, without warranties. Caffeine amounts, limits and plans are estimates and may be inaccurate.'),
       _para(context,
           'You are responsible for decisions about your health and diet. To the extent the law allows, the developers are not liable for any loss or harm arising from use of the app.'),
       _para(context, 'We may update these terms as the app changes. Continued use means you accept the updated version.'),
@@ -180,7 +180,7 @@ class LegalScreen extends StatelessWidget {
   List<Widget> _disclaimer(BuildContext context) => [
         _heading(context, 'Health disclaimer'),
         _para(context,
-            'Taper is a tracking and habit tool. It is not a medical device and does not give medical advice, diagnosis or treatment.'),
+            'NoCoffee is a tracking and habit tool. It is not a medical device and does not give medical advice, diagnosis or treatment.'),
         _para(context,
             'Talk to your doctor before reducing caffeine if you are pregnant or breastfeeding, have a heart condition, anxiety, high blood pressure, or take medication.'),
         _para(context,

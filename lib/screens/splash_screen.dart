@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: Image.asset('assets/images/logo.png', width: 132, height: 132),
               ),
               const SizedBox(height: 24),
-              Text('Taper', style: AppText.num(c.ink, 38)),
+              Text('NoCoffee', style: AppText.num(c.ink, 38)),
               const SizedBox(height: 8),
               Text('Quit coffee. Feel better.', style: AppText.body(c.inkMuted)),
             ]),
