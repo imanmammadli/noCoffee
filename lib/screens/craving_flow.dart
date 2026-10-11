@@ -319,7 +319,7 @@ class _CelebrateResisted extends StatelessWidget {
                     ]),
                   ),
                   const SizedBox(height: 12),
-                  InsightCard(icon: Icons.savings_rounded, text: 'That\'s ${app.profile.coffeePrice.toStringAsFixed(2)} ${app.profile.currency} you didn\'t spend today.'),
+                  const InsightCard(icon: Icons.savings_rounded, text: "That's one coffee you didn't buy today."),
                 ]),
               ),
             ),

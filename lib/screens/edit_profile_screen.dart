@@ -17,6 +17,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController cups;
   late final TextEditingController price;
   bool initialized = false;
+  bool triedSubmit = false;
 
   @override
   void didChangeDependencies() {
@@ -44,6 +45,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  bool get emailValid => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.text.trim());
+  bool get ageValid => int.tryParse(age.text.trim()) != null && int.parse(age.text.trim()) > 0;
+  bool get priceValid => double.tryParse(price.text.trim()) != null && double.parse(price.text.trim()) >= 0;
+  bool get formValid =>
+      first.text.trim().isNotEmpty && last.text.trim().isNotEmpty && emailValid && ageValid && priceValid;
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -60,7 +67,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     radius: 38,
                     backgroundColor: c.coffee,
                     child: Text(
-                      first.text.isEmpty ? 'A' : first.text.substring(0, 1).toUpperCase(),
+                      first.text.isEmpty ? '?' : first.text.substring(0, 1).toUpperCase(),
                       style: const TextStyle(color: Color(0xFFFFF9F1), fontWeight: FontWeight.w700, fontSize: 26),
                     ),
                   ),
@@ -70,31 +77,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 24),
               Row(children: [
-                Expanded(child: _field(context, 'First name', first)),
+                Expanded(
+                    child: _field(context, 'First name', first,
+                        error: triedSubmit && first.text.trim().isEmpty ? 'Required' : null)),
                 const SizedBox(width: 10),
-                Expanded(child: _field(context, 'Last name', last)),
+                Expanded(
+                    child: _field(context, 'Last name', last,
+                        error: triedSubmit && last.text.trim().isEmpty ? 'Required' : null)),
               ]),
               const SizedBox(height: 14),
-              _field(context, 'Email', email, icon: Icons.mail_outline_rounded),
+              _field(context, 'Email', email,
+                  icon: Icons.mail_outline_rounded,
+                  error: triedSubmit && !emailValid ? 'Enter a valid email' : null),
               const SizedBox(height: 14),
-              _field(context, 'Age', age, numeric: true),
+              _field(context, 'Age', age, numeric: true, error: triedSubmit && !ageValid ? 'Required' : null),
               const SizedBox(height: 14),
               _field(context, 'Daily coffee (cups)', cups, numeric: true),
               const SizedBox(height: 14),
-              Row(children: [
-                Expanded(flex: 3, child: _field(context, 'Coffee price', price, numeric: true)),
-                const SizedBox(width: 10),
-                Expanded(flex: 2, child: TInput(label: 'Currency', value: context.app.profile.currency)),
-              ]),
+              _field(context, 'Coffee price', price,
+                  numeric: true, error: triedSubmit && !priceValid ? 'Required' : null),
               const SizedBox(height: 24),
               TButton('Save changes', onTap: () {
+                setState(() => triedSubmit = true);
+                if (!formValid) return;
                 final p = context.app.profile;
-                p.firstName = first.text;
-                p.lastName = last.text;
-                p.email = email.text;
-                p.age = int.tryParse(age.text) ?? p.age;
-                p.dailyCups = int.tryParse(cups.text) ?? p.dailyCups;
-                p.coffeePrice = double.tryParse(price.text) ?? p.coffeePrice;
+                p.firstName = first.text.trim();
+                p.lastName = last.text.trim();
+                p.email = email.text.trim();
+                p.age = int.parse(age.text.trim());
+                p.dailyCups = int.tryParse(cups.text.trim()) ?? p.dailyCups;
+                p.coffeePrice = double.parse(price.text.trim());
                 context.app.refresh();
                 Navigator.pop(context);
                 showTaperToast(context, 'Profile updated');
@@ -107,8 +119,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _field(BuildContext context, String label, TextEditingController ctrl,
-      {IconData? icon, bool numeric = false}) {
+      {IconData? icon, bool numeric = false, String? error}) {
     final c = context.colors;
+    final hasError = error != null;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: AppText.label(c.inkMuted)),
       const SizedBox(height: 7),
@@ -118,19 +131,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         decoration: BoxDecoration(
             color: c.surface,
             borderRadius: BorderRadius.circular(17),
-            border: Border.all(color: c.line2, width: 1.4)),
+            border: Border.all(color: hasError ? c.danger : c.line2, width: 1.4)),
         child: Row(children: [
           if (icon != null) ...[Icon(icon, size: 18, color: c.inkMuted), const SizedBox(width: 10)],
           Expanded(
             child: TextField(
               controller: ctrl,
-              keyboardType: numeric ? TextInputType.number : TextInputType.text,
+              onChanged: (_) => setState(() {}),
+              keyboardType: numeric ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
               style: AppText.body(c.ink).copyWith(fontWeight: FontWeight.w600, fontSize: 15.5),
               decoration: const InputDecoration(border: InputBorder.none, isDense: true),
             ),
           ),
         ]),
       ),
+      if (hasError) ...[
+        const SizedBox(height: 5),
+        Text(error, style: AppText.tiny(c.danger)),
+      ],
     ]);
   }
 }

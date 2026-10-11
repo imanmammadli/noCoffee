@@ -96,11 +96,7 @@ class _StatsScreenState extends State<StatsScreen> {
                     child: _metric(context, '${app.coffeeFreeDaysCount}',
                         'coffee-free days')),
                 const SizedBox(width: 12),
-                Expanded(
-                    child: _metric(
-                        context,
-                        '${app.moneySaved.toStringAsFixed(0)} ${app.profile.currency}',
-                        'money saved')),
+                Expanded(child: _metric(context, app.moneySaved.toStringAsFixed(0), 'money saved')),
               ]),
               const SizedBox(height: 16),
               const InsightCard(
@@ -128,8 +124,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   _row(context, 'Coffee-free days',
                       '${app.coffeeFreeDaysCount}'),
                   Divider(color: c.line, height: 1),
-                  _row(context, 'Money saved',
-                      '${app.moneySaved.toStringAsFixed(2)} ${app.profile.currency}'),
+                  _row(context, 'Money saved', app.moneySaved.toStringAsFixed(2)),
                 ]),
               ),
               const SizedBox(height: 16),

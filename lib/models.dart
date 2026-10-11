@@ -117,19 +117,16 @@ class Profile {
   double weightKg;
   int dailyCups;
   double coffeePrice;
-  String currency;
   Profile({
-    this.firstName = 'Alex',
-    this.lastName = 'Mammadov',
-    this.email = 'alex@mail.com',
-    this.age = 32,
-    this.weightKg = 78,
-    this.dailyCups = 4,
-    this.coffeePrice = 3.5,
-    this.currency = 'AZN',
+    this.firstName = '',
+    this.lastName = '',
+    this.email = '',
+    this.age = 0,
+    this.weightKg = 0,
+    this.dailyCups = 0,
+    this.coffeePrice = 0,
   });
 }
-
 class NotificationPrefs {
   bool coffeeReminders = true;
   bool dailyProgress = true;

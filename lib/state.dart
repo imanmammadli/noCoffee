@@ -261,11 +261,7 @@ class AppState extends ChangeNotifier {
             '50 coffees avoided',
             (s) => s.cravingsResisted >= 50,
             (s) => '${s.cravingsResisted} of 50'),
-        Achievement(
-            'saved10',
-            '💰',
-            '10 ${profile.currency} saved',
-            (s) => s.moneySaved >= 10,
+        Achievement('saved10', '💰', 'First 10 saved', (s) => s.moneySaved >= 10,
             (s) => '${s.moneySaved.toStringAsFixed(0)} of 10'),
         Achievement(
             'challenge30',

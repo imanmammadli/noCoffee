@@ -50,7 +50,7 @@ class AchievementsScreen extends StatelessWidget {
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  mainAxisExtent: 140,
+                  mainAxisExtent: 160,
                 ),
                 children: list.map((a) {
                   final on = a.isUnlocked(snap);
