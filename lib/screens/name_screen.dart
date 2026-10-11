@@ -73,9 +73,7 @@ class _NameScreenState extends State<NameScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: _field(context, 'Avg. coffee price', price,
-                    numeric: true,
-                    icon: Icons.attach_money_rounded,
-                    error: triedSubmit && !priceValid ? 'Required' : null),
+                    numeric: true, error: triedSubmit && !priceValid ? 'Required' : null),
               ),
             ]),
             const SizedBox(height: 28),

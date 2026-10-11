@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
+import '../notification_service.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
@@ -10,6 +11,49 @@ class NotificationSettingsScreen extends StatefulWidget {
 }
 
 class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
+  final _service = NotificationService.instance;
+
+  Future<void> _toggleMotivation(bool on) async {
+    final n = context.app.notifications;
+    try {
+      if (on) {
+        final granted = await _service.requestPermission();
+        if (!granted) {
+          if (mounted) {
+            showTaperToast(context, 'Notifications are blocked. Allow them in your phone settings.',
+                isError: true);
+          }
+          return;
+        }
+        await _service.scheduleMotivation();
+      } else {
+        await _service.cancelMotivation();
+      }
+      if (!mounted) return;
+      setState(() => n.motivation = on);
+      showTaperToast(
+          context, on ? 'Daily motivation on · around ${_service.motivationTimeLabel}' : 'Daily motivation off');
+    } catch (_) {
+      if (mounted) showTaperToast(context, 'Could not set up notifications', isError: true);
+    }
+  }
+
+  Future<void> _sendTest() async {
+    if (!_service.supported) {
+      showTaperToast(context, 'Notifications work in the phone app, not in the browser');
+      return;
+    }
+    final granted = await _service.requestPermission();
+    if (!granted) {
+      if (mounted) {
+        showTaperToast(context, 'Notifications are blocked. Allow them in your phone settings.',
+            isError: true);
+      }
+      return;
+    }
+    await _service.showTest();
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -17,19 +61,26 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
     return AppScaffold(
       body: Column(children: [
-        TopBar(title: 'Notifications', back: true),
+        const TopBar(title: 'Notifications', back: true),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             children: [
-              const InsightCard(icon: Icons.notifications_none_rounded, text: 'We send at most three a day, and none between 22:00 and 07:00.'),
+              const InsightCard(
+                  icon: Icons.notifications_none_rounded,
+                  text: 'We send at most three a day, and none between 22:00 and 07:00.'),
               const SizedBox(height: 16),
               _group(context, [
-                _toggleRow(context, 'Coffee reminders', '"Remember to track your coffee today."', n.coffeeReminders, (v) => setState(() => n.coffeeReminders = v)),
-                _toggleRow(context, 'Daily progress', 'A summary at 20:00 with tomorrow\'s target', n.dailyProgress, (v) => setState(() => n.dailyProgress = v)),
-                _toggleRow(context, 'Limit warning', '"You\'re getting close to your daily limit."', n.limitWarning, (v) => setState(() => n.limitWarning = v)),
-                _toggleRow(context, 'Streak reminders', '"You\'re on a 7-day streak 🔥"', n.streakReminders, (v) => setState(() => n.streakReminders = v)),
-                _toggleRow(context, 'Motivation', '"Small steps create big changes."', n.motivation, (v) => setState(() => n.motivation = v)),
+                _toggleRow(context, 'Coffee reminders', '"Remember to track your coffee today."',
+                    n.coffeeReminders, (v) => setState(() => n.coffeeReminders = v)),
+                _toggleRow(context, 'Daily progress', "A summary at 20:00 with tomorrow's target",
+                    n.dailyProgress, (v) => setState(() => n.dailyProgress = v)),
+                _toggleRow(context, 'Limit warning', '"You\'re getting close to your daily limit."',
+                    n.limitWarning, (v) => setState(() => n.limitWarning = v)),
+                _toggleRow(context, 'Streak reminders', '"You\'re on a 7-day streak 🔥"',
+                    n.streakReminders, (v) => setState(() => n.streakReminders = v)),
+                _toggleRow(context, 'Motivation', 'One short message a day, around ${_service.motivationTimeLabel}',
+                    n.motivation, _toggleMotivation),
               ]),
               const SizedBox(height: 20),
               Text('Quiet hours', style: AppText.label(c.inkMuted)),
@@ -44,17 +95,24 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 borderColor: Colors.transparent,
                 padding: const EdgeInsets.all(14),
                 child: Row(children: [
-                  Container(width: 30, height: 30, decoration: BoxDecoration(color: c.coffee, borderRadius: BorderRadius.circular(9)),
-                      alignment: Alignment.center, child: const Icon(Icons.coffee_rounded, size: 16, color: Color(0xFFFFF9F1))),
+                  Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(color: c.coffee, borderRadius: BorderRadius.circular(9)),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.coffee_rounded, size: 16, color: Color(0xFFFFF9F1))),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('Taper · now', style: AppText.tiny(c.ink)),
-                      Text('Your caffeine target this week is 150 mg/day.', style: AppText.tiny(c.inkMuted)),
+                      Text('Small steps create big changes.', style: AppText.tiny(c.inkMuted)),
                     ]),
                   ),
                 ]),
               ),
+              const SizedBox(height: 16),
+              TButton('Send a test notification',
+                  style: TBtnStyle.secondary, small: true, onTap: _sendTest),
             ],
           ),
         ),
@@ -66,7 +124,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18),
-      decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(22), border: Border.all(color: c.line)),
+      decoration: BoxDecoration(
+          color: c.surface, borderRadius: BorderRadius.circular(22), border: Border.all(color: c.line)),
       child: Column(children: tiles.expand((t) => [t, Divider(color: c.line, height: 1)]).toList()..removeLast()),
     );
   }

@@ -19,13 +19,18 @@ import 'screens/settings_screen.dart';
 import 'screens/notification_settings_screen.dart';
 import 'screens/delete_data_screen.dart';
 import 'screens/name_screen.dart';
+import 'notification_service.dart';
 
-void main() {
-  runApp(const TaperApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final motivationOn = await NotificationService.instance.init();
+  runApp(TaperApp(motivationOn: motivationOn));
 }
 
 class TaperApp extends StatefulWidget {
-  const TaperApp({super.key});
+  final bool motivationOn;
+  const TaperApp({super.key, this.motivationOn = false});
+
   @override
   State<TaperApp> createState() => _TaperAppState();
 }
@@ -36,6 +41,7 @@ class _TaperAppState extends State<TaperApp> {
   @override
   void initState() {
     super.initState();
+    state.notifications.motivation = widget.motivationOn;
     state.addListener(() => setState(() {}));
   }
 
