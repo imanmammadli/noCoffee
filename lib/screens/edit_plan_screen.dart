@@ -11,28 +11,52 @@ class EditPlanScreen extends StatefulWidget {
 }
 
 class _EditPlanScreenState extends State<EditPlanScreen> {
-  late QuitMethod method;
-  double speed = 0.5; // 0 gentle .. 1 fast
-  bool loaded = false;
+  Goal? goal;
+  QuitMethod? method;
+  ReductionSpeed? speed;
+  DateTime? startDate;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final app = context.app;
-    final plan = app.plan!;
-    if (!loaded) {
-      method = plan.method;
-      loaded = true;
+    final current = app.plan;
+    if (current == null) {
+      return const AppScaffold(
+        body: Column(children: [
+          TopBar(title: 'Edit plan', back: true),
+          Expanded(child: SizedBox()),
+        ]),
+      );
     }
-    final weeksLabel = speed < 0.34 ? '8 weeks to zero' : (speed < 0.67 ? '5 weeks to zero' : '3 weeks to zero');
+    goal ??= current.goal == Goal.trackOnly ? Goal.reduce : current.goal;
+    method ??= current.method;
+    speed ??= current.speed;
+    startDate ??= current.startDate;
+
+    final preview = Plan.build(
+      goal: goal!,
+      method: method!,
+      speed: speed!,
+      startDate: startDate!,
+      baselineMg: current.baselineMg,
+    );
 
     return AppScaffold(
       body: Column(children: [
-        TopBar(title: 'Edit plan', back: true),
+        const TopBar(title: 'Edit plan', back: true),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             children: [
+              Text('Goal', style: AppText.label(c.inkMuted)),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: TChip('Reduce', on: goal == Goal.reduce, onTap: () => setState(() => goal = Goal.reduce))),
+                const SizedBox(width: 8),
+                Expanded(child: TChip('Quit completely', on: goal == Goal.quit, onTap: () => setState(() => goal = Goal.quit))),
+              ]),
+              const SizedBox(height: 20),
               Text('Quit method', style: AppText.label(c.inkMuted)),
               const SizedBox(height: 8),
               Row(children: [
@@ -41,68 +65,69 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                 Expanded(child: TChip('Immediately', on: method == QuitMethod.immediate, onTap: () => setState(() => method = QuitMethod.immediate))),
               ]),
               const SizedBox(height: 20),
-              TInput(label: 'Start date', value: _fmt(plan.startDate), icon: Icons.calendar_today_rounded),
+              TInput(
+                label: 'Start date',
+                value: _fmt(startDate!),
+                icon: Icons.calendar_today_rounded,
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: startDate!,
+                    firstDate: DateTime.now().subtract(const Duration(days: 60)),
+                    lastDate: DateTime.now().add(const Duration(days: 90)),
+                  );
+                  if (picked != null) setState(() => startDate = picked);
+                },
+              ),
               const SizedBox(height: 10),
-              TInput(label: 'Target date', value: _fmt(plan.targetDate), icon: Icons.calendar_today_rounded),
-              const SizedBox(height: 10),
-              TInput(label: "Today's limit", value: '${plan.currentDailyLimit} mg', icon: Icons.coffee_rounded),
+              TInput(label: 'End date', value: _fmt(preview.targetDate), icon: Icons.calendar_today_rounded),
               if (method == QuitMethod.gradual) ...[
                 const SizedBox(height: 20),
                 Text('Reduction speed', style: AppText.label(c.inkMuted)),
                 const SizedBox(height: 8),
-                TCard(
-                  child: Column(children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text(speed < 0.34 ? 'Gentle' : (speed < 0.67 ? 'Steady' : 'Fast'), style: AppText.h3(c.ink)),
-                      Text(weeksLabel, style: AppText.tiny(c.inkMuted)),
-                    ]),
-                    SliderTheme(
-                      data: SliderThemeData(
-                        activeTrackColor: c.accent,
-                        inactiveTrackColor: c.surface2,
-                        thumbColor: c.surface,
-                        overlayColor: c.accent.withOpacity(0.15),
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12, elevation: 2),
-                      ),
-                      child: Slider(value: speed, onChanged: (v) => setState(() => speed = v)),
-                    ),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text('Gentle · 8 weeks', style: AppText.tiny(c.inkMuted)),
-                      Text('Fast · 3 weeks', style: AppText.tiny(c.inkMuted)),
-                    ]),
-                  ]),
-                ),
-                const SizedBox(height: 16),
-                TCard(
-                  flat: true,
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('New plan preview', style: AppText.tiny(c.inkMuted)),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 60,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [1.0, 0.8, 0.64, 0.4, 0.26, 0.1].map((h) {
-                          final isLast = h == 0.1;
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 3),
-                              child: Container(
-                                height: (h * 60).clamp(6, 60),
-                                decoration: BoxDecoration(
-                                    color: isLast ? c.accent : c.coffeeSoft, borderRadius: BorderRadius.circular(8)),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ]),
-                ),
+                Row(children: [
+                  Expanded(child: TChip('Gentle', on: speed == ReductionSpeed.gentle, onTap: () => setState(() => speed = ReductionSpeed.gentle))),
+                  const SizedBox(width: 8),
+                  Expanded(child: TChip('Steady', on: speed == ReductionSpeed.steady, onTap: () => setState(() => speed = ReductionSpeed.steady))),
+                  const SizedBox(width: 8),
+                  Expanded(child: TChip('Fast', on: speed == ReductionSpeed.fast, onTap: () => setState(() => speed = ReductionSpeed.fast))),
+                ]),
               ],
+              const SizedBox(height: 16),
+              TCard(
+                flat: true,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('New plan preview · ${preview.weeks.length} weeks', style: AppText.tiny(c.inkMuted)),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 60,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: preview.weeks.map((w) {
+                        final base = preview.baselineMg == 0 ? 1 : preview.baselineMg;
+                        final isLast = w == preview.weeks.last;
+                        return Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 3),
+                            child: Container(
+                              height: (w.targetMg / base * 60).clamp(6, 60).toDouble(),
+                              decoration: BoxDecoration(
+                                  color: isLast ? c.accent : c.coffeeSoft, borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text('Baseline ${preview.baselineMg} mg → ${preview.finalTargetMg} mg a day',
+                      style: AppText.tiny(c.inkMuted)),
+                ]),
+              ),
               const SizedBox(height: 24),
               TButton('Save plan', onTap: () {
-                plan.method = method;
+                app.plan = preview;
+                app.refresh();
                 Navigator.pop(context);
                 showTaperToast(context, 'Plan saved');
               }),

@@ -21,6 +21,8 @@ import 'screens/delete_data_screen.dart';
 import 'screens/name_screen.dart';
 import 'notification_service.dart';
 
+final GlobalKey<ScaffoldMessengerState> messengerKey = GlobalKey<ScaffoldMessengerState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final state = await AppState.load();
@@ -45,12 +47,31 @@ class _TaperAppState extends State<TaperApp> with WidgetsBindingObserver {
     super.initState();
     // The phone's scheduled notifications are the source of truth for this toggle.
     state.notifications.motivation = widget.motivationOn;
-    state.addListener(() => setState(() {}));
+    state.addListener(_onStateChanged);
     WidgetsBinding.instance.addObserver(this);
+    NotificationService.instance.syncAll(state);
+  }
+
+  void _onStateChanged() {
+    setState(() {});
+    final warning = state.takeWarning();
+    if (warning != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final m = messengerKey.currentState;
+        if (m == null) return;
+        m.hideCurrentSnackBar();
+        m.showSnackBar(SnackBar(
+          content: Text(warning),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ));
+      });
+    }
   }
 
   @override
   void dispose() {
+    state.removeListener(_onStateChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -58,7 +79,10 @@ class _TaperAppState extends State<TaperApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState s) {
     // Save right away when the app leaves the foreground.
-    if (s != AppLifecycleState.resumed) state.saveNow();
+    if (s != AppLifecycleState.resumed) {
+      state.saveNow();
+      if (s == AppLifecycleState.paused) NotificationService.instance.syncAll(state);
+    }
   }
 
   @override
@@ -75,6 +99,7 @@ class _TaperAppState extends State<TaperApp> with WidgetsBindingObserver {
         child: MaterialApp(
           title: 'Taper',
           debugShowCheckedModeBanner: false,
+          scaffoldMessengerKey: messengerKey,
           theme: ThemeData(
             useMaterial3: true,
             fontFamily: 'Roboto',

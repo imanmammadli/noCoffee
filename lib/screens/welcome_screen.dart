@@ -18,11 +18,9 @@ class WelcomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(color: c.coffee, borderRadius: BorderRadius.circular(22)),
-                    child: const Icon(Icons.coffee_rounded, color: Color(0xFFFFF9F1), size: 30),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: Image.asset('assets/images/logo.png', width: 72, height: 72),
                   ),
                   const SizedBox(height: 24),
                   Text('Quit coffee.\nFeel better.', style: AppText.display(c.ink).copyWith(fontSize: 42)),

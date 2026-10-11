@@ -4,14 +4,52 @@ import '../models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
-class TrackingScreen extends StatelessWidget {
-  const TrackingScreen({super.key});
+const _monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+DateTime _dayOf(DateTime t) => DateTime(t.year, t.month, t.day);
+
+String _dayLabel(DateTime d) {
+  final today = _dayOf(DateTime.now());
+  final diff = today.difference(_dayOf(d)).inDays;
+  if (diff == 0) return 'Today';
+  if (diff == 1) return 'Yesterday';
+  return '${d.day} ${_monthNames[d.month - 1]}${d.year != today.year ? ' ${d.year}' : ''}';
+}
+
+class TrackingScreen extends StatefulWidget {
+  final DateTime? initialDay;
+  const TrackingScreen({super.key, this.initialDay});
+
+  @override
+  State<TrackingScreen> createState() => _TrackingScreenState();
+}
+
+class _TrackingScreenState extends State<TrackingScreen> {
+  late DateTime day = _dayOf(widget.initialDay ?? DateTime.now());
+
+  Future<void> _pickDate() async {
+    final today = _dayOf(DateTime.now());
+    final first = context.app.firstDay ?? today.subtract(const Duration(days: 365));
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: day,
+      firstDate: first.isBefore(day) ? first : day,
+      lastDate: today,
+    );
+    if (picked != null) setState(() => day = _dayOf(picked));
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final app = context.app;
-    final entries = app.todayEntries;
+    final today = _dayOf(DateTime.now());
+    final isToday = day == today;
+    final isYesterday = today.difference(day).inDays == 1;
+    final entries = app.entriesOnDay(day);
+    final total = app.mgOnDay(day);
+    final limit = app.limitOnDay(day);
+    final remaining = limit - total;
     return AppScaffold(
       navIndex: 1,
       body: Column(children: [
@@ -21,29 +59,35 @@ class TrackingScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             children: [
               Row(children: [
-                TChip('Today', on: true),
+                TChip('Today', on: isToday, onTap: () => setState(() => day = today)),
                 const SizedBox(width: 8),
-                TChip('Yesterday'),
+                TChip('Yesterday', on: isYesterday,
+                    onTap: () => setState(() => day = today.subtract(const Duration(days: 1)))),
                 const SizedBox(width: 8),
-                TChip('Calendar', icon: Icons.calendar_today_rounded,
-                    onTap: () => Navigator.pushNamed(context, '/history')),
+                Flexible(
+                  child: TChip(!isToday && !isYesterday ? _dayLabel(day) : 'Calendar',
+                      on: !isToday && !isYesterday,
+                      icon: Icons.calendar_today_rounded,
+                      onTap: _pickDate),
+                ),
               ]),
               const SizedBox(height: 16),
               TCard(
                 child: Column(children: [
                   Row(children: [
-                    _stat(context, '${app.todayTotalMg}', 'mg caffeine'),
+                    _stat(context, '$total', 'mg caffeine'),
                     _stat(context, '${entries.length}', 'drinks'),
-                    _stat(context, '${app.todayLimit}', 'daily limit'),
-                    _stat(context, '${app.todayRemaining}', 'remaining', color: c.accent),
+                    _stat(context, '$limit', 'daily limit'),
+                    _stat(context, '$remaining', remaining < 0 ? 'over' : 'remaining',
+                        color: remaining < 0 ? c.warn : c.accent),
                   ]),
                   const SizedBox(height: 16),
-                  TBar(value: app.todayLimit == 0 ? 0 : app.todayTotalMg / app.todayLimit),
+                  TBar(value: limit == 0 ? (total == 0 ? 0.0 : 1.0) : (total / limit).clamp(0.0, 1.0).toDouble()),
                 ]),
               ),
               const SizedBox(height: 24),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('Timeline', style: AppText.h3(c.ink)),
+                Text(isToday ? 'Timeline' : _dayLabel(day), style: AppText.h3(c.ink)),
                 Text('${entries.length} entries', style: AppText.tiny(c.inkMuted)),
               ]),
               const SizedBox(height: 8),
@@ -52,10 +96,12 @@ class TrackingScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 40),
                   child: EmptyState(
                     icon: Icons.coffee_rounded,
-                    title: 'No coffee logged today',
-                    subtitle: 'Nice. Log one if that changes.',
-                    ctaLabel: 'Add coffee',
-                    onCta: () => Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false),
+                    title: isToday ? 'No coffee logged today' : 'No coffee logged on this day',
+                    subtitle: isToday ? 'Nice. Log one if that changes.' : 'A coffee-free day.',
+                    ctaLabel: isToday ? 'Add coffee' : null,
+                    onCta: isToday
+                        ? () => Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false)
+                        : null,
                   ),
                 )
               else
@@ -198,7 +244,7 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
       time = e.time;
       loaded = true;
     }
-    final dayTotalAfter = app.todayTotalMg -
+    final dayTotalAfter = app.mgOnDay(time) -
         app.entries.firstWhere((e) => e.id == widget.entryId).mg +
         mg;
 
@@ -262,12 +308,11 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
                 ]),
               ),
               const SizedBox(height: 16),
-              TInput(label: 'Time', value: 'Today, ${fmtTime(time)}', icon: Icons.access_time_rounded, onTap: () async {
+              TInput(label: 'Time', value: '${_dayLabel(time)}, ${fmtTime(time)}', icon: Icons.access_time_rounded, onTap: () async {
                 final picked = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(time));
                 if (picked != null) {
                   setState(() {
-                    final now = DateTime.now();
-                    time = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+                    time = DateTime(time.year, time.month, time.day, picked.hour, picked.minute);
                   });
                 }
               }),

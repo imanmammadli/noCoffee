@@ -133,7 +133,7 @@ class TCard extends StatelessWidget {
         boxShadow: lift
             ? [
                 BoxShadow(
-                    color: Colors.black.withOpacity(
+                    color: Colors.black.withValues(alpha: 
                         c.brightness == Brightness.dark ? 0.45 : 0.12),
                     blurRadius: 26,
                     offset: const Offset(0, 10))

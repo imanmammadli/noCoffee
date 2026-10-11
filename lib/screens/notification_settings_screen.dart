@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
+import '../models.dart';
 import '../notification_service.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -25,7 +26,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           }
           return;
         }
-        await _service.scheduleMotivation();
+        await _service.scheduleMotivation(isQuiet: n.isQuiet);
       } else {
         await _service.cancelMotivation();
       }
@@ -36,6 +37,44 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     } catch (_) {
       if (mounted) showTaperToast(context, 'Could not set up notifications', isError: true);
     }
+  }
+
+  /// Used by the four simple toggles: asks for permission when turning on,
+  /// saves, then rebuilds the scheduled notifications.
+  Future<void> _toggle(bool on, void Function(bool) set) async {
+    final app = context.app;
+    if (on) {
+      final granted = await _service.requestPermission();
+      if (!granted) {
+        if (mounted) {
+          showTaperToast(context, 'Notifications are blocked. Allow them in your phone settings.',
+              isError: true);
+        }
+        return;
+      }
+    }
+    set(on);
+    app.refresh();
+    if (mounted) setState(() {});
+    await _service.syncAll(app);
+  }
+
+  Future<void> _pickQuiet(bool from) async {
+    final app = context.app;
+    final n = app.notifications;
+    final current = from ? n.quietFromMin : n.quietUntilMin;
+    final picked = await showTimePicker(
+        context: context, initialTime: TimeOfDay(hour: current ~/ 60, minute: current % 60));
+    if (picked == null) return;
+    final v = picked.hour * 60 + picked.minute;
+    if (from) {
+      n.quietFromMin = v;
+    } else {
+      n.quietUntilMin = v;
+    }
+    app.refresh();
+    if (mounted) setState(() {});
+    await _service.syncAll(app);
   }
 
   Future<void> _sendTest() async {
@@ -66,19 +105,23 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             children: [
-              const InsightCard(
+              InsightCard(
                   icon: Icons.notifications_none_rounded,
-                  text: 'We send at most three a day, and none between 22:00 and 07:00.'),
+                  text:
+                      'We send at most four a day, and none between ${fmtMinutes(n.quietFromMin)} and ${fmtMinutes(n.quietUntilMin)}.'),
               const SizedBox(height: 16),
               _group(context, [
-                _toggleRow(context, 'Coffee reminders', '"Remember to track your coffee today."',
-                    n.coffeeReminders, (v) { setState(() => n.coffeeReminders = v); context.app.refresh(); }),
+                _toggleRow(context, 'Coffee reminders', 'A nudge at 14:00 to track your coffee',
+                    n.coffeeReminders, (v) => _toggle(v, (x) => n.coffeeReminders = x)),
                 _toggleRow(context, 'Daily progress', "A summary at 20:00 with tomorrow's target",
-                    n.dailyProgress, (v) => setState(() => n.dailyProgress = v)),
-                _toggleRow(context, 'Limit warning', '"You\'re getting close to your daily limit."',
-                    n.limitWarning, (v) => setState(() => n.limitWarning = v)),
-                _toggleRow(context, 'Streak reminders', '"You\'re on a 7-day streak 🔥"',
-                    n.streakReminders, (v) => setState(() => n.streakReminders = v)),
+                    n.dailyProgress, (v) => _toggle(v, (x) => n.dailyProgress = x)),
+                _toggleRow(context, 'Limit warning', 'A heads-up in the app when you near or pass your limit',
+                    n.limitWarning, (v) {
+                  setState(() => n.limitWarning = v);
+                  context.app.refresh();
+                }),
+                _toggleRow(context, 'Streak reminders', 'An evening message about your streak 🔥',
+                    n.streakReminders, (v) => _toggle(v, (x) => n.streakReminders = x)),
                 _toggleRow(context, 'Motivation', 'One short message a day, around ${_service.motivationTimeLabel}',
                     n.motivation, _toggleMotivation),
               ]),
@@ -86,8 +129,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               Text('Quiet hours', style: AppText.label(c.inkMuted)),
               const SizedBox(height: 8),
               _group(context, [
-                _valueRow(context, Icons.nightlight_round, 'From', '22:00'),
-                _valueRow(context, Icons.wb_sunny_outlined, 'Until', '07:00'),
+                _valueRow(context, Icons.nightlight_round, 'From', fmtMinutes(n.quietFromMin), () => _pickQuiet(true)),
+                _valueRow(context, Icons.wb_sunny_outlined, 'Until', fmtMinutes(n.quietUntilMin), () => _pickQuiet(false)),
               ]),
               const SizedBox(height: 20),
               TCard(
@@ -148,16 +191,19 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
-  Widget _valueRow(BuildContext context, IconData icon, String label, String value) {
+  Widget _valueRow(BuildContext context, IconData icon, String label, String value, VoidCallback onTap) {
     final c = context.colors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 13),
-      child: Row(children: [
-        Icon(icon, size: 18, color: c.inkMuted),
-        const SizedBox(width: 14),
-        Expanded(child: Text(label, style: AppText.body(c.ink).copyWith(fontWeight: FontWeight.w600, fontSize: 14.5))),
-        Text(value, style: AppText.tiny(c.inkMuted)),
-      ]),
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        child: Row(children: [
+          Icon(icon, size: 18, color: c.inkMuted),
+          const SizedBox(width: 14),
+          Expanded(child: Text(label, style: AppText.body(c.ink).copyWith(fontWeight: FontWeight.w600, fontSize: 14.5))),
+          Text(value, style: AppText.num(c.ink, 15)),
+        ]),
+      ),
     );
   }
 }

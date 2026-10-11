@@ -11,11 +11,14 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl =
       AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..forward();
+  late final Animation<double> _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+  late final Animation<double> _scale =
+      Tween<double>(begin: 0.88, end: 1).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack));
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 1400), () {
+    Future.delayed(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
       final done = context.app.onboardingDone;
       Navigator.pushReplacementNamed(context, done ? '/home' : '/welcome');
@@ -34,28 +37,22 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     return Scaffold(
       backgroundColor: c.bg,
       body: Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          AnimatedBuilder(
-            animation: _ctrl,
-            builder: (_, __) => SizedBox(
-              width: 120,
-              height: 120,
-              child: Stack(alignment: Alignment.center, children: [
-                CircularProgressIndicator(
-                  value: _ctrl.value * 0.74,
-                  strokeWidth: 3,
-                  color: c.coffee,
-                  backgroundColor: c.ring,
-                ),
-                Icon(Icons.coffee_rounded, size: 44, color: c.coffee),
-              ]),
-            ),
+        child: FadeTransition(
+          opacity: _fade,
+          child: ScaleTransition(
+            scale: _scale,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: Image.asset('assets/images/logo.png', width: 132, height: 132),
+              ),
+              const SizedBox(height: 24),
+              Text('Taper', style: AppText.num(c.ink, 38)),
+              const SizedBox(height: 8),
+              Text('Quit coffee. Feel better.', style: AppText.body(c.inkMuted)),
+            ]),
           ),
-          const SizedBox(height: 22),
-          Text('Taper', style: AppText.num(c.ink, 38)),
-          const SizedBox(height: 8),
-          Text('Quit coffee. Feel better.', style: AppText.body(c.inkMuted)),
-        ]),
+        ),
       ),
     );
   }

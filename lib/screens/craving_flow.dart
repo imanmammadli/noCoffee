@@ -76,7 +76,7 @@ class _LevelStep extends StatelessWidget {
                             color: on ? c.coffee : c.surface2,
                             borderRadius: BorderRadius.circular(14),
                             boxShadow: on
-                                ? [BoxShadow(color: c.coffee.withOpacity(.4), blurRadius: 14, offset: const Offset(0, 6))]
+                                ? [BoxShadow(color: c.coffee.withValues(alpha: .4), blurRadius: 14, offset: const Offset(0, 6))]
                                 : null,
                           ),
                         ),

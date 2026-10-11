@@ -65,31 +65,50 @@ enum Goal { reduce, quit, trackOnly }
 enum QuitMethod { gradual, immediate }
 enum ReductionSpeed { gentle, steady, fast }
 
+/// Share of the baseline intake allowed in each week of a gradual plan.
+List<double> planSteps(bool toZero, ReductionSpeed speed) {
+  if (toZero) {
+    switch (speed) {
+      case ReductionSpeed.gentle:
+        return [0.85, 0.72, 0.6, 0.48, 0.36, 0.24, 0.12, 0.0];
+      case ReductionSpeed.fast:
+        return [0.5, 0.2, 0.0];
+      case ReductionSpeed.steady:
+        return [0.75, 0.625, 0.375, 0.25, 0.0];
+    }
+  } else {
+    switch (speed) {
+      case ReductionSpeed.gentle:
+        return [0.9, 0.8, 0.7, 0.6, 0.55, 0.5];
+      case ReductionSpeed.fast:
+        return [0.7, 0.5, 0.4];
+      case ReductionSpeed.steady:
+        return [0.8, 0.65, 0.55, 0.45];
+    }
+  }
+}
+
 class WeekStep {
   final int weekNumber;
   final int targetMg;
-  bool completed;
-  WeekStep(this.weekNumber, this.targetMg, {this.completed = false});
+  const WeekStep(this.weekNumber, this.targetMg);
 
-  Map<String, dynamic> toJson() =>
-      {'weekNumber': weekNumber, 'targetMg': targetMg, 'completed': completed};
+  Map<String, dynamic> toJson() => {'weekNumber': weekNumber, 'targetMg': targetMg};
 
-  factory WeekStep.fromJson(Map<String, dynamic> j) => WeekStep(
-        j['weekNumber'] as int,
-        j['targetMg'] as int,
-        completed: j['completed'] as bool? ?? false,
-      );
+  factory WeekStep.fromJson(Map<String, dynamic> j) =>
+      WeekStep(j['weekNumber'] as int, j['targetMg'] as int);
 }
 
+/// A plan is just dates + weekly targets. Which week you are in, today's
+/// limit and "completed" status are all derived from today's date.
 class Plan {
   Goal goal;
   QuitMethod method;
   ReductionSpeed speed;
   DateTime startDate;
   DateTime targetDate;
-  int currentDailyLimit;
+  int baselineMg;
   List<WeekStep> weeks;
-  int currentWeekIndex;
 
   Plan({
     required this.goal,
@@ -97,14 +116,90 @@ class Plan {
     required this.speed,
     required this.startDate,
     required this.targetDate,
-    required this.currentDailyLimit,
+    required this.baselineMg,
     required this.weeks,
-    required this.currentWeekIndex,
   });
 
-  int get dayNumber => DateTime.now().difference(startDate).inDays + 1;
-  int get totalDays => targetDate.difference(startDate).inDays;
-  double get progress => (dayNumber / totalDays).clamp(0, 1);
+  factory Plan.build({
+    required Goal goal,
+    required QuitMethod method,
+    required ReductionSpeed speed,
+    required DateTime startDate,
+    required int baselineMg,
+  }) {
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final List<WeekStep> weeks;
+    if (method == QuitMethod.immediate) {
+      // Stopping at once: four weeks at zero to get through the hardest part.
+      weeks = [for (var i = 0; i < 4; i++) WeekStep(i + 1, 0)];
+    } else {
+      final steps = planSteps(goal == Goal.quit, speed);
+      weeks = [
+        for (var i = 0; i < steps.length; i++) WeekStep(i + 1, (baselineMg * steps[i]).round())
+      ];
+    }
+    return Plan(
+      goal: goal,
+      method: method,
+      speed: speed,
+      startDate: start,
+      targetDate: DateTime(start.year, start.month, start.day + weeks.length * 7),
+      baselineMg: baselineMg,
+      weeks: weeks,
+    );
+  }
+
+  static int _daysBetween(DateTime a, DateTime b) =>
+      DateTime.utc(b.year, b.month, b.day).difference(DateTime.utc(a.year, a.month, a.day)).inDays;
+
+  int get daysSinceStart => _daysBetween(startDate, DateTime.now());
+  bool get hasStarted => daysSinceStart >= 0;
+  int get daysUntilStart => hasStarted ? 0 : -daysSinceStart;
+  int get dayNumber => hasStarted ? daysSinceStart + 1 : 0;
+  int get totalDays => _daysBetween(startDate, targetDate);
+  bool get isFinished => daysSinceStart >= totalDays;
+
+  double get progress {
+    if (!hasStarted) return 0.0;
+    final v = dayNumber / totalDays;
+    return v > 1 ? 1.0 : v;
+  }
+
+  int get currentWeekIndex {
+    if (!hasStarted) return 0;
+    final i = daysSinceStart ~/ 7;
+    return i >= weeks.length ? weeks.length - 1 : i;
+  }
+
+  /// Before the plan starts, the limit is simply the baseline intake.
+  int get currentDailyLimit => hasStarted ? weeks[currentWeekIndex].targetMg : baselineMg;
+
+  /// The daily limit that applied on a given calendar day.
+  int limitOn(DateTime day) {
+    final diff = _daysBetween(startDate, day);
+    if (diff < 0) return baselineMg;
+    final i = diff ~/ 7;
+    return weeks[i >= weeks.length ? weeks.length - 1 : i].targetMg;
+  }
+
+  int get finalTargetMg => weeks.last.targetMg;
+
+  String get endLabel => method == QuitMethod.immediate
+      ? 'First 4 weeks end'
+      : (finalTargetMg == 0 ? 'Coffee-free by' : 'Target reached by');
+
+  bool isWeekDone(int i) =>
+      hasStarted && (i < currentWeekIndex || (isFinished && i == weeks.length - 1));
+
+  DateTime weekStart(int i) => DateTime(startDate.year, startDate.month, startDate.day + 7 * i);
+
+  /// Moves the whole timeline back so the next week starts today.
+  void startNextWeekNow() {
+    if (!hasStarted || currentWeekIndex >= weeks.length - 1) return;
+    final shift = (currentWeekIndex + 1) * 7 - daysSinceStart;
+    startDate = DateTime(startDate.year, startDate.month, startDate.day - shift);
+    targetDate = DateTime(targetDate.year, targetDate.month, targetDate.day - shift);
+  }
 
   Map<String, dynamic> toJson() => {
         'goal': goal.name,
@@ -112,25 +207,41 @@ class Plan {
         'speed': speed.name,
         'startDate': startDate.toIso8601String(),
         'targetDate': targetDate.toIso8601String(),
-        'currentDailyLimit': currentDailyLimit,
+        'baselineMg': baselineMg,
         'weeks': weeks.map((w) => w.toJson()).toList(),
-        'currentWeekIndex': currentWeekIndex,
       };
 
-  factory Plan.fromJson(Map<String, dynamic> j) => Plan(
-        goal: enumByName(Goal.values, j['goal'], Goal.reduce),
-        method: enumByName(QuitMethod.values, j['method'], QuitMethod.gradual),
-        speed: enumByName(ReductionSpeed.values, j['speed'], ReductionSpeed.steady),
-        startDate: DateTime.parse(j['startDate'] as String),
-        targetDate: DateTime.parse(j['targetDate'] as String),
-        currentDailyLimit: j['currentDailyLimit'] as int,
-        weeks: (j['weeks'] as List<dynamic>)
-            .map((w) => WeekStep.fromJson(w as Map<String, dynamic>))
-            .toList(),
-        currentWeekIndex: j['currentWeekIndex'] as int,
-      );
-}
+  factory Plan.fromJson(Map<String, dynamic> j) {
+    final goal = enumByName(Goal.values, j['goal'], Goal.reduce);
+    final method = enumByName(QuitMethod.values, j['method'], QuitMethod.gradual);
+    final speed = enumByName(ReductionSpeed.values, j['speed'], ReductionSpeed.steady);
+    final weeks = (j['weeks'] as List<dynamic>)
+        .map((w) => WeekStep.fromJson(w as Map<String, dynamic>))
+        .toList();
 
+    final int baseline;
+    final saved = j['baselineMg'];
+    if (saved is int) {
+      baseline = saved;
+    } else {
+      // Older saves didn't store the baseline: work back from week 1.
+      final first = planSteps(goal == Goal.quit, speed).first;
+      baseline = (method == QuitMethod.gradual && first > 0)
+          ? (weeks.first.targetMg / first).round()
+          : 400;
+    }
+
+    return Plan(
+      goal: goal,
+      method: method,
+      speed: speed,
+      startDate: DateTime.parse(j['startDate'] as String),
+      targetDate: DateTime.parse(j['targetDate'] as String),
+      baselineMg: baseline,
+      weeks: weeks,
+    );
+  }
+}
 class Achievement {
   final String id;
   final String emoji;
@@ -216,11 +327,23 @@ class Profile {
 class NotificationPrefs {
   NotificationPrefs();
 
-  bool coffeeReminders = true;
-  bool dailyProgress = true;
+  bool coffeeReminders = false;
+  bool dailyProgress = false;
   bool limitWarning = true;
-  bool streakReminders = true;
+  bool streakReminders = false;
   bool motivation = false;
+
+  /// Quiet hours, as minutes after midnight. No notification is scheduled
+  /// inside this window.
+  int quietFromMin = 22 * 60;
+  int quietUntilMin = 7 * 60;
+
+  bool isQuiet(int hour, int minute) {
+    final m = hour * 60 + minute;
+    if (quietFromMin == quietUntilMin) return false;
+    if (quietFromMin > quietUntilMin) return m >= quietFromMin || m < quietUntilMin;
+    return m >= quietFromMin && m < quietUntilMin;
+  }
 
   Map<String, dynamic> toJson() => {
         'coffeeReminders': coffeeReminders,
@@ -228,6 +351,8 @@ class NotificationPrefs {
         'limitWarning': limitWarning,
         'streakReminders': streakReminders,
         'motivation': motivation,
+        'quietFromMin': quietFromMin,
+        'quietUntilMin': quietUntilMin,
       };
 
   factory NotificationPrefs.fromJson(Map<String, dynamic> j) {
@@ -237,9 +362,14 @@ class NotificationPrefs {
     p.limitWarning = j['limitWarning'] as bool? ?? p.limitWarning;
     p.streakReminders = j['streakReminders'] as bool? ?? p.streakReminders;
     p.motivation = j['motivation'] as bool? ?? p.motivation;
+    p.quietFromMin = j['quietFromMin'] as int? ?? p.quietFromMin;
+    p.quietUntilMin = j['quietUntilMin'] as int? ?? p.quietUntilMin;
     return p;
   }
 }
+
+String fmtMinutes(int m) =>
+    '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
 
 String fmtTime(DateTime t) =>
     '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';

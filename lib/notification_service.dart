@@ -4,6 +4,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'motivation_messages.dart';
+import 'state.dart';
 
 /// Schedules one motivational notification per day for the next 30 days.
 /// The window is refreshed every time the app opens, so it never runs out
@@ -17,6 +18,14 @@ class NotificationService {
   static const int _hour = 11;
   static const int _minute = 0;
   static const int _testId = 1;
+
+  // Other daily notifications (30 days ahead each).
+  static const int _reminderId = 2000;
+  static const int _progressId = 3000;
+  static const int _streakId = 4000;
+  static const int _reminderHour = 14, _reminderMinute = 0;
+  static const int _progressHour = 20, _progressMinute = 0;
+  static const int _streakHour = 18, _streakMinute = 30;
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
@@ -90,9 +99,10 @@ class NotificationService {
     return pending.any((p) => p.id >= _firstId && p.id < _firstId + _daysAhead);
   }
 
-  Future<void> scheduleMotivation() async {
+  Future<void> scheduleMotivation({bool Function(int hour, int minute)? isQuiet}) async {
     if (!supported) return;
     await cancelMotivation();
+    if (isQuiet != null && isQuiet(_hour, _minute)) return;
 
     final now = tz.TZDateTime.now(tz.local);
     var start = tz.TZDateTime(tz.local, now.year, now.month, now.day, _hour, _minute);
@@ -137,5 +147,88 @@ class NotificationService {
       body: message,
       notificationDetails: _details,
     );
+  }
+
+  /// Re-creates every daily notification from the current settings and data.
+  /// Called on start, when the app goes to the background, and whenever a
+  /// notification setting changes, so texts use fresh numbers.
+  Future<void> syncAll(AppState app) async {
+    if (!supported) return;
+    try {
+      final n = app.notifications;
+      for (var i = 0; i < _daysAhead; i++) {
+        await _plugin.cancel(id: _reminderId + i);
+        await _plugin.cancel(id: _progressId + i);
+        await _plugin.cancel(id: _streakId + i);
+      }
+
+      if (n.motivation) {
+        await scheduleMotivation(isQuiet: n.isQuiet);
+      }
+
+      final now = tz.TZDateTime.now(tz.local);
+      final plan = app.plan;
+
+      Future<void> daily(
+        int baseId,
+        int hour,
+        int minute,
+        String Function(DateTime day, bool isToday) body, {
+        bool Function(bool isToday)? skip,
+      }) async {
+        if (n.isQuiet(hour, minute)) return;
+        for (var i = 0; i < _daysAhead; i++) {
+          final when = tz.TZDateTime(tz.local, now.year, now.month, now.day + i, hour, minute);
+          if (!when.isAfter(now)) continue;
+          final isToday = i == 0;
+          if (skip != null && skip(isToday)) continue;
+          await _plugin.zonedSchedule(
+            id: baseId + i,
+            title: 'Taper',
+            body: body(DateTime(when.year, when.month, when.day), isToday),
+            scheduledDate: when,
+            notificationDetails: _details,
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          );
+        }
+      }
+
+      if (n.coffeeReminders) {
+        await daily(
+          _reminderId,
+          _reminderHour,
+          _reminderMinute,
+          (_, __) => 'Remember to track your coffee today.',
+          skip: (isToday) => isToday && app.todayEntries.isNotEmpty,
+        );
+      }
+
+      if (n.dailyProgress) {
+        await daily(_progressId, _progressHour, _progressMinute, (day, isToday) {
+          final tomorrow = DateTime(day.year, day.month, day.day + 1);
+          final tail = plan == null ? '' : " Tomorrow's target: ${plan.limitOn(tomorrow)} mg.";
+          if (isToday) {
+            final used = app.todayTotalMg;
+            return plan == null
+                ? 'Today: $used mg logged.'
+                : 'Today: $used of ${app.todayLimit} mg.$tail';
+          }
+          return plan == null
+              ? 'How did today go? Take a moment to log your drinks.'
+              : 'How did today go?$tail';
+        });
+      }
+
+      if (n.streakReminders) {
+        await daily(_streakId, _streakHour, _streakMinute, (_, isToday) {
+          if (isToday && app.streak >= 2) {
+            return "You're on a ${app.streak}-day streak 🔥 Keep it going.";
+          }
+          return 'Stay under your limit today and keep your streak alive.';
+        });
+      }
+    } catch (e) {
+      debugPrint('Notification sync failed: $e');
+    }
   }
 }

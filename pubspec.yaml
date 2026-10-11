@@ -1,5 +1,5 @@
 name: no_coffee_app
-description: Coffee & caffeine reduction app.
+description: Taper - quit or reduce coffee and caffeine.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -19,6 +19,22 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/logo.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#023E23"
+  adaptive_icon_foreground: "assets/icon/icon_fg.png"
+  web:
+    generate: true
+    image_path: "assets/icon/icon.png"
+    background_color: "#023E23"
+    theme_color: "#023E23"

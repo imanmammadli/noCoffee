@@ -122,6 +122,125 @@ class AppState extends ChangeNotifier {
   int _cupsOn(DateTime d) => _entriesOn(d).fold(0, (s, e) => s + e.cups);
 
   int get todayLimit => plan?.currentDailyLimit ?? 250;
+  int _limitOn(DateTime d) => plan?.limitOn(d) ?? 250;
+
+  // Day-based reads used by Tracking, History and Statistics.
+  List<CoffeeEntry> entriesOnDay(DateTime d) =>
+      _entriesOn(d).toList()..sort((a, b) => a.time.compareTo(b.time));
+  int mgOnDay(DateTime d) => _mgOn(d);
+  int limitOnDay(DateTime d) => _limitOn(d);
+
+  /// Usual daily intake: the plan baseline, or the cups you told us about.
+  int get baselineMg {
+    final p = plan;
+    if (p != null && p.baselineMg > 0) return p.baselineMg;
+    final cups = profile.dailyCups > 0 ? profile.dailyCups : onboardingCups;
+    return cups * 90;
+  }
+
+  /// Earliest day with any data (first drink, or the plan start once it began).
+  DateTime? get firstDay {
+    final today = _dayOnly(DateTime.now());
+    DateTime? best;
+    if (entries.isNotEmpty) {
+      best = _dayOnly(entries.map((e) => e.time).reduce((a, b) => a.isBefore(b) ? a : b));
+    }
+    final p = plan;
+    if (p != null) {
+      final s = _dayOnly(p.startDate);
+      if (!s.isAfter(today) && (best == null || s.isBefore(best))) best = s;
+    }
+    return best;
+  }
+
+  /// Average mg per day between two days (inclusive). Days before your first
+  /// data and the still-empty today are left out. Null when nothing counts.
+  double? avgMgBetween(DateTime from, DateTime to) {
+    final first = firstDay;
+    if (first == null) return null;
+    final today = _dayOnly(DateTime.now());
+    var s = _dayOnly(from).isBefore(first) ? first : _dayOnly(from);
+    var e = _dayOnly(to).isAfter(today) ? today : _dayOnly(to);
+    if (e == today && _entriesOn(today).isEmpty) e = _prevDay(today);
+    if (e.isBefore(s)) return null;
+    var total = 0;
+    var n = 0;
+    for (var d = s; !d.isAfter(e); d = _nextDay(d)) {
+      total += _mgOn(d);
+      n++;
+    }
+    return n == 0 ? null : total / n;
+  }
+
+  /// Best run of days at or under the limit since tracking began.
+  int get longestStreak {
+    final start = _trackingStart;
+    if (start == null) return 0;
+    final today = _dayOnly(DateTime.now());
+    var best = 0;
+    var run = 0;
+    for (var d = start; !d.isAfter(today); d = _nextDay(d)) {
+      final total = _mgOn(d);
+      if (d == today && total == 0) continue;
+      if (total <= _limitOn(d)) {
+        run++;
+        if (run > best) best = run;
+      } else {
+        run = 0;
+      }
+    }
+    return best;
+  }
+
+  /// Weekday you drink the most on, or null until there is enough data.
+  String? get busiestWeekday {
+    final first = firstDay;
+    if (first == null) return null;
+    final today = _dayOnly(DateTime.now());
+    if (today.difference(first).inDays < 13) return null;
+    final totals = List<int>.filled(7, 0);
+    final counts = List<int>.filled(7, 0);
+    for (var d = first; !d.isAfter(today); d = _nextDay(d)) {
+      totals[d.weekday - 1] += _mgOn(d);
+      counts[d.weekday - 1]++;
+    }
+    var bestI = -1;
+    double bestAvg = 0;
+    for (var i = 0; i < 7; i++) {
+      if (counts[i] == 0) continue;
+      final a = totals[i] / counts[i];
+      if (a > bestAvg) {
+        bestAvg = a;
+        bestI = i;
+      }
+    }
+    if (bestI < 0) return null;
+    return const ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][bestI];
+  }
+
+  // ---------------- in-app limit warning ----------------
+
+  String? _pendingWarning;
+
+  /// Returns (and clears) a warning produced by the last drink you logged.
+  String? takeWarning() {
+    final w = _pendingWarning;
+    _pendingWarning = null;
+    return w;
+  }
+
+  void _checkLimit(int before, int after) {
+    if (!notifications.limitWarning || plan == null) return;
+    final limit = todayLimit;
+    if (after <= before) return;
+    if (limit == 0) {
+      _pendingWarning = 'Your plan is coffee-free today. Take a breath before the next one.';
+    } else if (before <= limit && after > limit) {
+      _pendingWarning = 'You went over today\'s limit ($after of $limit mg).';
+    } else if (before < limit * 0.8 && after >= limit * 0.8 && after <= limit) {
+      _pendingWarning = 'You\'re close to your daily limit ($after of $limit mg).';
+    }
+  }
 
   List<CoffeeEntry> get todayEntries =>
       _entriesOn(DateTime.now()).toList()..sort((a, b) => a.time.compareTo(b.time));
@@ -156,7 +275,7 @@ class AppState extends ChangeNotifier {
     for (var d = today; !d.isBefore(start); d = _prevDay(d)) {
       final total = _mgOn(d);
       if (d == today && total == 0) continue;
-      if (total <= todayLimit) {
+      if (total <= _limitOn(d)) {
         count++;
       } else {
         break;
@@ -209,6 +328,7 @@ class AppState extends ChangeNotifier {
   void refresh() => notifyListeners();
 
   void addEntry(DrinkType type, int cups, int mg, DateTime time) {
+    final before = todayTotalMg;
     entries.add(CoffeeEntry(
       id: UniqueKey().toString(),
       drink: type,
@@ -216,6 +336,8 @@ class AppState extends ChangeNotifier {
       mg: mg,
       time: time,
     ));
+    final t = _dayOnly(time);
+    if (t == _dayOnly(DateTime.now())) _checkLimit(before, todayTotalMg);
     notifyListeners();
   }
 
@@ -239,58 +361,16 @@ class AppState extends ChangeNotifier {
   }
 
   void buildPlanFromOnboarding() {
-    final estimateMg = onboardingCups * 90;
-    final start = onboardingStartDate;
-    final toZero = onboardingGoal == Goal.quit;
-    List<WeekStep> weeks;
-    Duration totalSpan;
-    switch (onboardingMethod) {
-      case QuitMethod.immediate:
-        weeks = [WeekStep(1, 0)];
-        totalSpan = const Duration(days: 1);
-        break;
-      case QuitMethod.gradual:
-        final steps = _speedSteps(toZero, onboardingSpeed);
-        weeks = [
-          for (int i = 0; i < steps.length; i++) WeekStep(i + 1, (estimateMg * steps[i]).round())
-        ];
-        totalSpan = Duration(days: weeks.length * 7);
-        break;
-    }
-    plan = Plan(
+    plan = Plan.build(
       goal: onboardingGoal,
       method: onboardingMethod,
       speed: onboardingSpeed,
-      startDate: start,
-      targetDate: start.add(totalSpan),
-      currentDailyLimit: weeks.first.targetMg,
-      weeks: weeks,
-      currentWeekIndex: 0,
+      startDate: onboardingStartDate,
+      baselineMg: onboardingCups * 90,
     );
     notifyListeners();
   }
 
-  List<double> _speedSteps(bool toZero, ReductionSpeed speed) {
-    if (toZero) {
-      switch (speed) {
-        case ReductionSpeed.gentle:
-          return [0.85, 0.72, 0.6, 0.48, 0.36, 0.24, 0.12, 0.0];
-        case ReductionSpeed.fast:
-          return [0.5, 0.2, 0.0];
-        case ReductionSpeed.steady:
-          return [0.75, 0.625, 0.375, 0.25, 0.0];
-      }
-    } else {
-      switch (speed) {
-        case ReductionSpeed.gentle:
-          return [0.9, 0.8, 0.7, 0.6, 0.55, 0.5];
-        case ReductionSpeed.fast:
-          return [0.7, 0.5, 0.4];
-        case ReductionSpeed.steady:
-          return [0.8, 0.65, 0.55, 0.45];
-      }
-    }
-  }
   void completeOnboarding() {
     buildPlanFromOnboarding();
     profile.dailyCups = onboardingCups;
@@ -345,7 +425,7 @@ class AppState extends ChangeNotifier {
         coffeeFreeDays: coffeeFreeDaysCount,
         cravingsResisted: cravingsResisted,
         moneySaved: moneySaved,
-        firstWeekDone: (plan?.weeks.first.completed) ?? false,
+        firstWeekDone: plan?.isWeekDone(0) ?? false,
         daysIntoChallenge: plan?.dayNumber ?? 0,
       );
 }

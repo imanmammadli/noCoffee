@@ -16,7 +16,7 @@ class PlanScreen extends StatelessWidget {
       return AppScaffold(
         navIndex: 2,
         body: Column(children: [
-          TopBar(title: 'My plan'),
+          const TopBar(title: 'My plan'),
           Expanded(
             child: EmptyState(
               icon: Icons.donut_large_rounded,
@@ -30,7 +30,7 @@ class PlanScreen extends StatelessWidget {
       );
     }
 
-    final day = plan.dayNumber.clamp(1, plan.totalDays);
+    final day = plan.dayNumber.clamp(0, plan.totalDays);
     final consumed = app.todayTotalMg;
     final limit = plan.currentDailyLimit;
     final remaining = (limit - consumed).clamp(0, 999999);
@@ -54,7 +54,7 @@ class PlanScreen extends StatelessWidget {
                           TextSpan(text: ' / ${plan.totalDays}', style: AppText.num(c.inkMuted, 18)),
                         ])),
                         const SizedBox(height: 4),
-                        Text('days into your plan', style: AppText.tiny(c.inkMuted)),
+                        Text(plan.hasStarted ? 'days into your plan' : 'Starts in ${plan.daysUntilStart} day${plan.daysUntilStart == 1 ? '' : 's'}', style: AppText.tiny(c.inkMuted)),
                       ]),
                     ),
                     ProgressRing(
@@ -66,7 +66,7 @@ class PlanScreen extends StatelessWidget {
                   Divider(color: c.line, height: 1),
                   const SizedBox(height: 16),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    Text('Coffee-free by', style: AppText.label(c.inkMuted)),
+                    Text(plan.endLabel, style: AppText.label(c.inkMuted)),
                     Text(_fmtDate(plan.targetDate), style: AppText.num(c.ink, 16)),
                   ]),
                 ]),
@@ -76,7 +76,7 @@ class PlanScreen extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                     Text("This week's target", style: AppText.h3(c.ink)),
-                    TPill('Week ${plan.currentWeekIndex + 1}', fg: c.ink, bg: c.surface2),
+                    TPill(plan.hasStarted ? 'Week ${plan.currentWeekIndex + 1}' : 'Not started', fg: c.ink, bg: c.surface2),
                   ]),
                   const SizedBox(height: 16),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
@@ -96,9 +96,9 @@ class PlanScreen extends StatelessWidget {
                 child: Column(
                   children: List.generate(plan.weeks.length, (i) {
                     final w = plan.weeks[i];
-                    final isNow = i == plan.currentWeekIndex;
-                    final isDone = i < plan.currentWeekIndex;
-                    final isLocked = i > plan.currentWeekIndex;
+                    final isNow = plan.hasStarted && i == plan.currentWeekIndex && !plan.isFinished;
+                    final isDone = plan.isWeekDone(i);
+                    final isLocked = !isNow && !isDone;
                     return Column(children: [
                       InkWell(
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WeekDetailScreen(weekIndex: i))),

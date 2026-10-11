@@ -3,6 +3,7 @@ import '../main.dart';
 import '../state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import 'support_screens.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -55,11 +56,13 @@ class SettingsScreen extends StatelessWidget {
               _section(context, 'Support'),
               _group(context, [
                 _tile(context, Icons.help_outline_rounded, 'Help centre & FAQ',
-                    onTap: () {}),
+                    onTap: () => _open(context, const FaqScreen())),
                 _tile(context, Icons.mail_outline_rounded, 'Contact support',
-                    onTap: () {}),
+                    onTap: () => _open(context, const ContactScreen())),
                 _tile(context, Icons.privacy_tip_outlined, 'Privacy & terms',
-                    onTap: () {}),
+                    onTap: () => _open(context, const LegalScreen(kind: LegalKind.privacyTerms))),
+                _tile(context, Icons.health_and_safety_outlined, 'Health disclaimer',
+                    onTap: () => _open(context, const LegalScreen(kind: LegalKind.disclaimer))),
               ]),
             ],
           ),
@@ -67,6 +70,9 @@ class SettingsScreen extends StatelessWidget {
       ]),
     );
   }
+
+  void _open(BuildContext context, Widget page) =>
+      Navigator.push(context, MaterialPageRoute(builder: (_) => page));
 
   int _onCount(AppState app) {
     final n = app.notifications;

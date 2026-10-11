@@ -26,22 +26,13 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   int get estimateMg => cups * 90;
 
-  List<double> _steps() {
-    final toZero = goal == Goal.quit;
-    if (toZero) {
-      switch (speed) {
-        case ReductionSpeed.gentle: return [0.85, 0.72, 0.6, 0.48, 0.36, 0.24, 0.12, 0.0];
-        case ReductionSpeed.fast: return [0.5, 0.2, 0.0];
-        case ReductionSpeed.steady: return [0.75, 0.625, 0.375, 0.25, 0.0];
-      }
-    } else {
-      switch (speed) {
-        case ReductionSpeed.gentle: return [0.9, 0.8, 0.7, 0.6, 0.55, 0.5];
-        case ReductionSpeed.fast: return [0.7, 0.5, 0.4];
-        case ReductionSpeed.steady: return [0.8, 0.65, 0.55, 0.45];
-      }
-    }
-  }
+  Plan _previewPlan() => Plan.build(
+        goal: goal,
+        method: method,
+        speed: speed,
+        startDate: startDate,
+        baselineMg: estimateMg,
+      );
 
   void next() {
     if (step < totalSteps - 1) {
@@ -260,7 +251,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                           margin: const EdgeInsets.only(right: 6),
                           height: 8 + 26 * h,
                           decoration: BoxDecoration(
-                            color: h == 0.2 ? c.accent : c.coffee.withOpacity(0.35 + h * 0.5),
+                            color: h == 0.2 ? c.accent : c.coffee.withValues(alpha: 0.35 + h * 0.5),
                             borderRadius: BorderRadius.circular(9),
                           ),
                         ),
@@ -287,7 +278,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   Widget _planConfigStep() {
     final c = context.colors;
-    final stepsList = method == QuitMethod.immediate ? [estimateMg, 0] : _steps().map((f) => (estimateMg * f).round()).toList();
+    final plan = _previewPlan();
+    final stepsList = [estimateMg, ...plan.weeks.map((w) => w.targetMg)];
 
     return SingleChildScrollView(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -355,10 +347,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   Widget _readyStep() {
     final c = context.colors;
-    final stepsList = method == QuitMethod.immediate ? [estimateMg, 0] : _steps().map((f) => (estimateMg * f).round()).toList();
-    final firstGoal = stepsList.length > 1 ? stepsList[1] : stepsList[0];
-    final weeksCount = method == QuitMethod.immediate ? 0 : stepsList.length - 1;
-    final targetDate = startDate.add(Duration(days: weeksCount * 7));
+    final plan = _previewPlan();
+    final firstGoal = plan.weeks.first.targetMg;
+    final weeksCount = plan.weeks.length;
+    final targetDate = plan.targetDate;
+    final toZero = plan.finalTargetMg == 0;
 
     return Column(children: [
       Expanded(
@@ -375,9 +368,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                weeksCount == 0
+                method == QuitMethod.immediate
                     ? "You're starting from zero on ${_fmtDate(startDate)}. We'll help you through the first few days."
-                    : "In $weeksCount weeks you'll be caffeine-free. We'll keep the daily target in front of you.",
+                    : (toZero
+                        ? "In $weeksCount weeks you'll be caffeine-free. We'll keep the daily target in front of you."
+                        : "In $weeksCount weeks you'll reach ${plan.finalTargetMg} mg a day. We'll keep the daily target in front of you."),
                 style: AppText.body(c.inkMuted),
                 textAlign: TextAlign.center,
               ),
@@ -395,12 +390,20 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                 Divider(color: c.line, height: 1),
                 const SizedBox(height: 16),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('Coffee-free by', style: AppText.label(c.inkMuted)),
+                  Text(plan.endLabel, style: AppText.label(c.inkMuted)),
                   Text(_fmtDate(targetDate), style: AppText.num(c.ink, 17)),
                 ]),
               ]),
             ),
           ]),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+        child: Text(
+          'Taper is a tracking tool, not medical advice. If you have a health condition, are pregnant or take medication, talk to your doctor before changing your caffeine intake.',
+          style: AppText.tiny(c.inkMuted),
+          textAlign: TextAlign.center,
         ),
       ),
       Padding(

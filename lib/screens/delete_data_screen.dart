@@ -14,7 +14,7 @@ class DeleteDataScreen extends StatelessWidget {
 
     return AppScaffold(
       body: Column(children: [
-        TopBar(title: 'Delete all data', back: true),
+        const TopBar(title: 'Delete all data', back: true),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),

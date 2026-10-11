@@ -15,7 +15,7 @@ class AchievementsScreen extends StatelessWidget {
 
     return AppScaffold(
       body: Column(children: [
-        TopBar(title: 'Achievements', back: true),
+        const TopBar(title: 'Achievements', back: true),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),

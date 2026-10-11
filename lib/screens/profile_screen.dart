@@ -15,7 +15,7 @@ class ProfileScreen extends StatelessWidget {
     return AppScaffold(
       navIndex: 4,
       body: Column(children: [
-        TopBar(title: 'Profile'),
+        const TopBar(title: 'Profile'),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
