@@ -47,20 +47,6 @@ flutter build apk --release
 
 The file is created at `build/app/outputs/flutter-apk/app-release.apk`.
 
-## Project structure
-
-```
-lib/
-  main.dart                    app entry, routes, theme
-  models.dart                  plan, entries, profile, notification settings
-  state.dart                   app state, derived values, saving
-  storage.dart                 local storage
-  notification_service.dart    scheduled notifications
-  screens/                     all screens
-  widgets/common.dart          shared UI components
-assets/                        logo and app icon sources
-```
-
 ## Disclaimer
 
 NoCoffee is a tracking and habit tool, not medical advice. If you are pregnant, have a health condition or take medication, talk to your doctor before changing your caffeine intake.
