@@ -6,7 +6,21 @@
 
 <p align="center">Quit or reduce coffee and caffeine, one step at a time.</p>
 
-NoCoffee is a mobile app (Android and iOS, built with Flutter) that helps you cut down on caffeine with a plan that steps down week by week. There are no accounts and no servers: everything stays on your device.
+A mobile app (Android and iOS, built with Flutter) that helps you cut down on caffeine with a plan that steps down week by week. No accounts, no servers: everything stays on your device.
+
+I built this on my own as a portfolio project, from the design to the code. It is not published on any app store.
+
+## Design
+
+I designed the screens first (about 38 of them, light and dark) and then built the app from that spec. A few pages from the design:
+
+<p>
+  <img src="docs/design/cover.png" width="32%" alt="Design cover" />
+  <img src="docs/design/home-and-logging.png" width="32%" alt="Home and logging screens" />
+  <img src="docs/design/dark-mode.png" width="32%" alt="Dark mode" />
+</p>
+
+The design was drafted under the working name "Taper". The app itself is called NoCoffee.
 
 ## Features
 
@@ -47,6 +61,6 @@ flutter build apk --release
 
 The file is created at `build/app/outputs/flutter-apk/app-release.apk`.
 
-## Disclaimer
+## Note
 
-NoCoffee is a tracking and habit tool, not medical advice. If you are pregnant, have a health condition or take medication, talk to your doctor before changing your caffeine intake.
+Just a hobby and portfolio project. It tracks caffeine, but it is not medical advice, so check with a doctor before making big changes to your intake.
